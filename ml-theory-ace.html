@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ML Theory ACE – Theory + Code</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Literata:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#1c2733;--accent:#2457c5;--soft:#e8eef9;--bg:#f2f5f9}
+  body{background:var(--bg);color:var(--ink)}
+  h1,h2,h3,.brand{font-family:'Literata',Georgia,serif}
+  .topbar{background:var(--ink);color:#fff}
+  .topbar a{color:#cfe0ff;text-decoration:none;font-size:.9rem}
+  #sidebar{position:sticky;top:0;max-height:100vh;overflow-y:auto;padding:1rem .75rem}
+  .unit{font-weight:700;font-size:.85rem;margin:1rem 0 .35rem;color:#51606f}
+  .topic{display:block;width:100%;text-align:left;border:0;background:none;padding:.4rem .6rem;border-radius:.4rem;color:var(--ink);font-size:.93rem}
+  .topic:hover{background:var(--soft)}
+  .topic.active{background:var(--accent);color:#fff}
+  .panel{background:#fff;border-radius:.6rem;padding:1.25rem 1.5rem;box-shadow:0 1px 3px rgba(20,40,70,.08)}
+  .panel p,.panel li{max-width:75ch;line-height:1.65}
+  .params td:first-child{font-family:ui-monospace,Consolas,monospace;color:var(--accent);white-space:nowrap}
+  .panel li code{background:var(--soft);color:var(--accent);padding:.1rem .35rem;border-radius:.3rem;font-size:.85em}
+  pre{margin:0;border-radius:.5rem}
+  pre code{font-size:.85rem;padding:1rem!important}
+  .codebar{background:#21252b;color:#abb2bf;border-radius:.5rem .5rem 0 0;padding:.4rem .9rem;font-size:.8rem}
+  .libs span{background:var(--soft);color:var(--accent);border-radius:1rem;padding:.15rem .7rem;font-size:.82rem;margin:0 .35rem .35rem 0;display:inline-block;font-family:ui-monospace,Consolas,monospace}
+  :focus-visible{outline:3px solid #ffb703;outline-offset:2px}
+  @media(min-width:768px){#sidebar{height:100vh}}
+</style>
+</head>
+<body>
+<header class="topbar py-2">
+  <div class="container-fluid d-flex align-items-center gap-3">
+    <button class="btn btn-sm btn-outline-light d-md-none" data-bs-toggle="collapse" data-bs-target="#sidebar" aria-label="Toggle topics">Topics</button>
+    <span class="brand fs-5">Machine Learning Theory ACE</span>
+    <a class="ms-auto" href="https://codingacharya.blogspot.com/" target="_blank" rel="noopener">Coding Acharya</a>
+  </div>
+</header>
+
+<div class="container-fluid">
+  <div class="row">
+    <nav id="sidebar" class="col-md-3 col-xl-2 bg-white border-end collapse d-md-block" aria-label="Topics">
+      <input id="search" type="search" class="form-control form-control-sm" placeholder="Search topics" aria-label="Search topics">
+      <div id="menu"></div>
+    </nav>
+    <main class="col-md-9 col-xl-10 p-3 p-lg-4">
+      <div id="content"></div>
+      <div class="d-flex justify-content-between mt-3">
+        <button id="prev" class="btn btn-outline-primary btn-sm">Previous</button>
+        <button id="next" class="btn btn-primary btn-sm">Next</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+$(function () {
+
+  /* ---------- TOPIC DATA: add new topics by copying one object ---------- */
+  var T = [
+  { unit:"Unit 1", title:"Types of Learning",
+    theory:["<b>Supervised</b>: labeled data, predicts outputs (spam detection, house prices).",
+            "<b>Unsupervised</b>: unlabeled data, finds groups/patterns (K-Means, PCA).",
+            "<b>Semi-supervised</b>: few labels + many unlabeled samples.",
+            "<b>Reinforcement</b>: an agent learns from rewards and penalties (Q-Learning)."],
+    libs:["scikit-learn","numpy"],
+    params:[["n_clusters","Number of groups K-Means should find"],["max_iter","Logistic Regression solver iterations"],["random_state","Reproducible results"]],
+    code:`from sklearn.datasets import load_iris
+from sklearn.linear_model import LogisticRegression
+from sklearn.cluster import KMeans
+
+X, y = load_iris(return_X_y=True)
+
+# Supervised: uses labels y
+clf = LogisticRegression(max_iter=200).fit(X, y)
+print("Supervised accuracy:", clf.score(X, y))
+
+# Unsupervised: ignores labels
+km = KMeans(n_clusters=3, random_state=42, n_init=10).fit(X)
+print("Cluster labels:", km.labels_[:10])` },
+
+  { unit:"Unit 1", title:"Supervised Learning",
+    theory:["Learns the mapping <b>input → label</b> from labeled examples.",
+            "<b>Classification</b> predicts categories (metrics: accuracy, precision, recall, F1, ROC-AUC).",
+            "<b>Regression</b> predicts numbers (metrics: MAE, MSE, RMSE, R²).",
+            "Workflow: collect → preprocess → split (70-80% train) → train → evaluate → predict."],
+    libs:["scikit-learn"],
+    params:[["test_size","Fraction of data kept for testing (0.2 = 20%)"],["n_estimators","Number of trees in the forest"],["stratify","Keeps class ratio equal in train/test"]],
+    code:`from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+X, y = load_breast_cancer(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42)
+
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_tr, y_tr)
+
+pred = model.predict(X_te)
+print("Accuracy:", accuracy_score(y_te, pred))
+print(classification_report(y_te, pred))` },
+
+  { unit:"Unit 1", title:"The Brain and the Neuron",
+    theory:["Dendrites receive signals, the soma processes them, the axon sends output, synapses set connection strength.",
+            "Artificial neuron: inputs ↔ dendrites, <b>weights</b> ↔ synapses, <b>activation</b> ↔ firing decision.",
+            "Output: <code>a = f(Σ wᵢxᵢ + b)</code>."],
+    libs:["numpy"],
+    params:[["w","Weights: strength of each input"],["b","Bias: shifts the firing threshold"],["f","Activation function (sigmoid here)"]],
+    code:`import numpy as np
+
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+x = np.array([0.5, 0.8])      # inputs
+w = np.array([0.4, 0.6])      # weights
+b = -0.3                      # bias
+
+z = np.dot(w, x) + b          # weighted sum
+a = sigmoid(z)                # neuron output
+print("Output:", round(a, 4))` },
+
+  { unit:"Unit 1", title:"Design of a Learning System",
+    theory:["Steps: problem definition → data collection → preprocessing → feature engineering → choose algorithm → train → evaluate → predict → feedback/improve.",
+            "Good systems generalize, scale, and stay robust to noisy data.",
+            "A <b>Pipeline</b> chains preprocessing and the model so the same steps run in training and prediction."],
+    libs:["scikit-learn"],
+    params:[["StandardScaler","Standardizes features (mean 0, std 1)"],["cv","Number of cross-validation folds"],["scoring","Metric used to evaluate"]],
+    code:`from sklearn.datasets import load_wine
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score
+
+X, y = load_wine(return_X_y=True)
+
+pipe = Pipeline([
+    ("scale", StandardScaler()),               # preprocessing
+    ("model", LogisticRegression(max_iter=500))  # learner
+])
+
+scores = cross_val_score(pipe, X, y, cv=5, scoring="accuracy")
+print("CV accuracy: %.3f ± %.3f" % (scores.mean(), scores.std()))` },
+
+  { unit:"Unit 1", title:"Perspectives and Issues in ML",
+    theory:["Issues: poor data quality, <b>overfitting</b> (high train, low test accuracy), <b>underfitting</b>, bias, privacy, interpretability, computational cost, concept drift.",
+            "Fixes: cross-validation, regularization, more data, simpler models, feature selection."],
+    libs:["scikit-learn"],
+    params:[["max_depth","Limits tree depth to control overfitting"],["alpha","Regularization strength (Ridge)"],["cv","Folds for cross-validation"]],
+    code:`from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+X, y = load_breast_cancer(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.3, random_state=1)
+
+for depth in [None, 3]:       # None = unrestricted (overfits)
+    m = DecisionTreeClassifier(max_depth=depth, random_state=1).fit(X_tr, y_tr)
+    print("max_depth =", depth,
+          "| train:", round(m.score(X_tr, y_tr), 3),
+          "| test:",  round(m.score(X_te, y_te), 3))` },
+
+  { unit:"Unit 1", title:"Concept Learning and Find-S",
+    theory:["Concept learning infers a rule from positive and negative examples; it is a <b>search through the hypothesis space</b>.",
+            "<b>Find-S</b> starts with the most specific hypothesis, uses only positive examples, and replaces differing attributes with <code>?</code>.",
+            "Limits: ignores negatives, assumes noise-free data."],
+    libs:["pandas","numpy"],
+    params:[["'?'","Any value is acceptable"],["Yes/No","Positive and negative class labels"]],
+    code:`import pandas as pd
+
+data = pd.DataFrame([
+    ["Sunny","Warm","Normal","Strong","Warm","Same","Yes"],
+    ["Sunny","Warm","High","Strong","Warm","Same","Yes"],
+    ["Rainy","Cold","High","Strong","Warm","Change","No"],
+    ["Sunny","Warm","High","Strong","Cool","Change","Yes"]],
+    columns=["Sky","AirTemp","Humidity","Wind","Water","Forecast","Play"])
+
+def find_s(df):
+    pos = df[df["Play"] == "Yes"].iloc[:, :-1].values
+    h = list(pos[0])                  # first positive example
+    for row in pos[1:]:
+        h = [a if a == b else "?" for a, b in zip(h, row)]
+    return h
+
+print(find_s(data))   # ['Sunny','Warm','?','Strong','?','?']` },
+
+  { unit:"Unit 1", title:"Version Space & Candidate Elimination",
+    theory:["<b>Version space</b> = all hypotheses consistent with the training data, bounded by <b>S</b> (specific) and <b>G</b> (general).",
+            "Positive example: generalize S, drop inconsistent members of G.",
+            "Negative example: specialize G, drop members of S that cover it.",
+            "Uses both positive and negative examples (unlike Find-S)."],
+    libs:["numpy"],
+    params:[["S","Specific boundary hypothesis"],["G","List of general boundary hypotheses"]],
+    code:`import numpy as np
+
+X = np.array([["Sunny","Warm","Normal","Strong","Warm","Same"],
+              ["Sunny","Warm","High","Strong","Warm","Same"],
+              ["Rainy","Cold","High","Strong","Warm","Change"]])
+y = np.array(["Yes","Yes","No"])
+
+def covers(h, x):
+    return all(a == "?" or a == b for a, b in zip(h, x))
+
+def candidate_elimination(X, y):
+    n = X.shape[1]
+    S = list(X[y == "Yes"][0])
+    G = [["?"] * n]
+    for x, label in zip(X, y):
+        if label == "Yes":
+            S = [s if s == v else "?" for s, v in zip(S, x)]
+            G = [g for g in G if covers(g, x)]
+        else:
+            newG = []
+            for g in G:
+                if not covers(g, x):
+                    newG.append(g); continue
+                for i in range(n):          # specialize minimally
+                    if g[i] == "?" and S[i] != "?" and S[i] != x[i]:
+                        h = g.copy(); h[i] = S[i]; newG.append(h)
+            G = newG
+    return S, G
+
+S, G = candidate_elimination(X, y)
+print("S:", S); print("G:", G)` },
+
+  { unit:"Unit 1", title:"Perceptron & Linear Separability",
+    theory:["Perceptron: <code>y = step(wᵀx + b)</code>, a binary linear classifier.",
+            "Update rule: <code>w ← w + η(t − y)x</code>.",
+            "Converges only if the data is <b>linearly separable</b>; it cannot solve XOR."],
+    libs:["scikit-learn","numpy"],
+    params:[["eta0","Learning rate η"],["max_iter","Maximum passes over the data"],["tol","Stopping tolerance"]],
+    code:`import numpy as np
+from sklearn.linear_model import Perceptron
+
+# AND gate (linearly separable)
+X = np.array([[0,0],[0,1],[1,0],[1,1]])
+y = np.array([0, 0, 0, 1])
+
+p = Perceptron(eta0=0.1, max_iter=100, tol=1e-3, random_state=0)
+p.fit(X, y)
+
+print("Weights:", p.coef_, "Bias:", p.intercept_)
+print("Predictions:", p.predict(X))` },
+
+  { unit:"Unit 1", title:"Linear Regression",
+    theory:["Models a continuous target: <code>y = β₀ + β₁x₁ + … + βₙxₙ</code>.",
+            "Learns coefficients by minimizing <b>MSE</b> (least squares).",
+            "Assumes a linear relationship and is sensitive to outliers."],
+    libs:["scikit-learn","numpy"],
+    params:[["fit_intercept","Learn β₀ (default True)"],["coef_","Learned slopes β₁…βₙ"],["intercept_","Learned β₀"]],
+    code:`import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+area  = np.array([[1000],[1500],[2000],[2500]])   # sq ft
+price = np.array([30, 45, 60, 75])                # lakhs
+
+lr = LinearRegression().fit(area, price)
+pred = lr.predict(area)
+
+print("Slope:", lr.coef_[0], "Intercept:", lr.intercept_)
+print("MSE:", mean_squared_error(price, pred), "R2:", r2_score(price, pred))
+print("Price for 1800 sq ft:", lr.predict([[1800]])[0])` },
+
+  { unit:"Unit 2", title:"Multilayer Perceptron (MLP)",
+    theory:["Layers: <b>input → hidden (one or more) → output</b>.",
+            "Neuron: <code>z = Σwx + b</code>, <code>a = f(z)</code> with ReLU, Sigmoid, Tanh or Softmax.",
+            "Trained by feedforward → loss → backpropagation → weight update (Adam / SGD).",
+            "Needs scaled inputs; can overfit without regularization."],
+    libs:["scikit-learn"],
+    params:[["hidden_layer_sizes","Neurons per hidden layer, e.g. (64, 32)"],["activation","'relu', 'tanh' or 'logistic'"],["solver","'adam' or 'sgd'"],["learning_rate_init","Initial step size"],["max_iter","Training epochs"],["alpha","L2 regularization"]],
+    code:`from sklearn.datasets import load_digits
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+
+X, y = load_digits(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42)
+
+sc = StandardScaler().fit(X_tr)
+X_tr, X_te = sc.transform(X_tr), sc.transform(X_te)
+
+mlp = MLPClassifier(hidden_layer_sizes=(64, 32), activation="relu",
+                    solver="adam", learning_rate_init=0.001,
+                    alpha=1e-4, max_iter=300, random_state=42)
+mlp.fit(X_tr, y_tr)
+print("Test accuracy:", mlp.score(X_te, y_te))` },
+
+  { unit:"Unit 2", title:"Feedforward & Backpropagation",
+    theory:["<b>Feedforward</b>: inputs flow forward to produce a prediction.",
+            "<b>Backpropagation</b>: error flows backward using the chain rule: <code>∂E/∂w = (y − t)·y(1 − y)·x</code> for a sigmoid output with MSE.",
+            "Update: <code>w ← w − η ∂E/∂w</code>.",
+            "Hidden error: <code>δh = h(1 − h) Σ wδ</code>."],
+    libs:["numpy"],
+    params:[["lr","Learning rate η"],["epochs","Number of full training passes"],["W1, W2","Weights of hidden and output layers"]],
+    code:`import numpy as np
+np.random.seed(1)
+
+sigmoid  = lambda z: 1 / (1 + np.exp(-z))
+d_sigmoid = lambda a: a * (1 - a)
+
+X = np.array([[0,0],[0,1],[1,0],[1,1]])
+y = np.array([[0],[1],[1],[0]])           # XOR
+
+W1, b1 = np.random.randn(2, 4), np.zeros((1, 4))
+W2, b2 = np.random.randn(4, 1), np.zeros((1, 1))
+lr, epochs = 0.5, 10000
+
+for _ in range(epochs):
+    h = sigmoid(X @ W1 + b1)              # feedforward
+    out = sigmoid(h @ W2 + b2)
+
+    d_out = (out - y) * d_sigmoid(out)    # output delta
+    d_h = (d_out @ W2.T) * d_sigmoid(h)   # hidden delta
+
+    W2 -= lr * h.T @ d_out; b2 -= lr * d_out.sum(0, keepdims=True)
+    W1 -= lr * X.T @ d_h;   b1 -= lr * d_h.sum(0, keepdims=True)
+
+print(out.round(3))` },
+
+  { unit:"Unit 2", title:"RBF and Splines",
+    theory:["<b>RBF</b>: output depends only on distance from a center, e.g. Gaussian <code>φ(r) = exp(−r²/2σ²)</code>.",
+            "<b>Spline</b>: smooth piecewise polynomials joined at <b>knots</b>; the cubic spline is the most common.",
+            "RBFs suit ML function approximation; splines suit interpolation and curve fitting."],
+    libs:["scipy","numpy"],
+    params:[["kernel","RBF type: 'gaussian', 'thin_plate_spline'…"],["epsilon","Width control of the RBF (like 1/σ)"],["bc_type","Spline boundary: 'natural'"]],
+    code:`import numpy as np
+from scipy.interpolate import RBFInterpolator, CubicSpline
+
+x = np.array([1, 2, 3, 4])
+y = np.array([2, 4, 5, 7])
+
+# RBF interpolation (each point acts as a center)
+rbf = RBFInterpolator(x.reshape(-1, 1), y, kernel="gaussian", epsilon=1.0)
+print("RBF at 2.5:", rbf([[2.5]])[0])
+
+# Natural cubic spline
+cs = CubicSpline(x, y, bc_type="natural")
+print("Spline at 2.5:", cs(2.5))` },
+
+  { unit:"Unit 2", title:"RBF Network & Curse of Dimensionality",
+    theory:["RBF network: <b>input → RBF hidden layer (Gaussian) → linear output</b>.",
+            "Parameters: centers <code>c</code>, spread <code>σ</code>, output weights.",
+            "<b>Curse of dimensionality</b>: as features grow, data becomes sparse and distances lose meaning, so more data is needed."],
+    libs:["scikit-learn","numpy"],
+    params:[["kernel='rbf'","Gaussian kernel in SVM"],["gamma","Kernel width: 1/(2σ²); high = overfit"],["C","Penalty for misclassification"]],
+    code:`import numpy as np
+from sklearn.datasets import make_moons
+from sklearn.svm import SVC
+
+# RBF-kernel classifier on non-linear data
+X, y = make_moons(n_samples=300, noise=0.2, random_state=0)
+svm = SVC(kernel="rbf", gamma=1.0, C=1.0).fit(X, y)
+print("RBF accuracy:", svm.score(X, y))
+
+# Curse of dimensionality: distances become alike
+rng = np.random.default_rng(0)
+for d in [2, 100, 1000]:
+    P = rng.random((500, d))
+    dist = np.linalg.norm(P[1:] - P[0], axis=1)
+    print(d, "dims -> (max-min)/min =", round((dist.max()-dist.min())/dist.min(), 2))` }
+,
+  { unit:"Unit 2", title:"MLP in Practice & Examples",
+    theory:["Steps: collect → scale → split → build MLP → train (feedforward + backprop) → test.",
+            "Use <b>early stopping</b> and L2 <code>alpha</code> to limit overfitting.",
+            "Uses: digit recognition, spam detection, loan approval (classification); house prices (regression)."],
+    libs:["scikit-learn"],
+    params:[["early_stopping","Stop when validation score stops improving"],["validation_fraction","Share of train data held out"],["n_iter_no_change","Patience in epochs"]],
+    code:`from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPRegressor
+
+X, y = fetch_california_housing(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=0)
+
+model = make_pipeline(StandardScaler(),
+    MLPRegressor(hidden_layer_sizes=(64, 32), early_stopping=True,
+                 validation_fraction=0.1, n_iter_no_change=10,
+                 max_iter=300, random_state=0))
+model.fit(X_tr, y_tr)
+print("R2 on test:", model.score(X_te, y_te))` },
+
+  { unit:"Unit 2", title:"Interpolation & Basis Functions",
+    theory:["Fit non-linear data by expanding inputs into <b>basis functions</b> (polynomial, Gaussian, spline) and fitting a linear model on them.",
+            "Interpolation passes through every point; regression smooths the data.",
+            "High-degree polynomials oscillate; splines and RBFs are more stable."],
+    libs:["scikit-learn","numpy"],
+    params:[["degree","Highest polynomial power"],["include_bias","Add constant column"],["alpha","Ridge penalty to tame wiggles"]],
+    code:`import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import Ridge
+from sklearn.pipeline import make_pipeline
+
+x = np.linspace(0, 6, 20).reshape(-1, 1)
+y = np.sin(x).ravel() + np.random.default_rng(0).normal(0, 0.1, 20)
+
+model = make_pipeline(PolynomialFeatures(degree=5, include_bias=False),
+                      Ridge(alpha=0.1))
+model.fit(x, y)
+print("Prediction at x=2.5:", model.predict([[2.5]])[0])` },
+
+  { unit:"Unit 2", title:"Support Vector Machines",
+    theory:["Finds the hyperplane with the <b>maximum margin</b>; support vectors are the points closest to it.",
+            "<b>Kernel trick</b> (linear, poly, RBF) handles non-linear data.",
+            "<code>C</code> trades margin width for misclassification; <code>gamma</code> controls RBF reach."],
+    libs:["scikit-learn"],
+    params:[["C","Penalty: high = narrow margin, fewer errors"],["kernel","'linear', 'poly', 'rbf'"],["gamma","RBF/poly influence radius"]],
+    code:`from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+
+X, y = load_breast_cancer(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=1)
+
+svm = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=1.0, gamma="scale"))
+svm.fit(X_tr, y_tr)
+print("Accuracy:", svm.score(X_te, y_te))
+print("Support vectors:", svm[-1].n_support_)` },
+
+  { unit:"Unit 3", title:"Decision Trees & Constructing Them",
+    theory:["Splits data on the feature giving the best <b>impurity reduction</b>.",
+            "<b>Entropy</b> = −Σ p log₂p, <b>Information gain</b> = parent entropy − weighted child entropy; <b>Gini</b> = 1 − Σp² (ID3 / C4.5 / CART).",
+            "Stop with <code>max_depth</code> or pruning to avoid overfitting."],
+    libs:["scikit-learn"],
+    params:[["criterion","'gini' or 'entropy'"],["max_depth","Tree depth limit"],["min_samples_split","Minimum samples to split a node"],["ccp_alpha","Cost-complexity pruning"]],
+    code:`from sklearn.datasets import load_iris
+from sklearn.tree import DecisionTreeClassifier, export_text
+
+X, y = load_iris(return_X_y=True)
+tree = DecisionTreeClassifier(criterion="entropy", max_depth=3,
+                              min_samples_split=4, random_state=0).fit(X, y)
+
+print(export_text(tree, feature_names=["sl", "sw", "pl", "pw"]))
+print("Accuracy:", tree.score(X, y))` },
+
+  { unit:"Unit 3", title:"Classification and Regression Trees (CART)",
+    theory:["CART builds <b>binary</b> trees: Gini for classification, <b>variance (MSE) reduction</b> for regression.",
+            "A regression leaf predicts the mean of its samples.",
+            "Prune with <code>ccp_alpha</code> or limit depth."],
+    libs:["scikit-learn","numpy"],
+    params:[["criterion","'squared_error' (regression) / 'gini' (classification)"],["max_depth","Depth limit"],["min_samples_leaf","Minimum samples in a leaf"]],
+    code:`import numpy as np
+from sklearn.tree import DecisionTreeRegressor
+
+X = np.sort(5 * np.random.default_rng(0).random((80, 1)), axis=0)
+y = np.sin(X).ravel()
+
+reg = DecisionTreeRegressor(criterion="squared_error",
+                            max_depth=3, min_samples_leaf=5).fit(X, y)
+print("Prediction at 2.0:", reg.predict([[2.0]])[0])
+print("R2:", reg.score(X, y))` },
+
+  { unit:"Unit 3", title:"Ensemble Learning: Bagging",
+    theory:["<b>Bagging</b> trains many models on bootstrap samples and averages/votes, reducing <b>variance</b>.",
+            "Random Forest = bagging + random feature subsets.",
+            "Out-of-bag (OOB) samples give a free validation score."],
+    libs:["scikit-learn"],
+    params:[["n_estimators","Number of models"],["max_samples","Bootstrap sample fraction"],["oob_score","Use out-of-bag evaluation"],["max_features","Features per split (Random Forest)"]],
+    code:`from sklearn.datasets import load_breast_cancer
+from sklearn.ensemble import BaggingClassifier, RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+X, y = load_breast_cancer(return_X_y=True)
+
+bag = BaggingClassifier(DecisionTreeClassifier(), n_estimators=50,
+                        max_samples=0.8, oob_score=True, random_state=0).fit(X, y)
+print("Bagging OOB score:", bag.oob_score_)
+
+rf = RandomForestClassifier(n_estimators=100, max_features="sqrt",
+                            oob_score=True, random_state=0).fit(X, y)
+print("Random Forest OOB:", rf.oob_score_)` },
+
+  { unit:"Unit 3", title:"Ensemble Learning: Boosting",
+    theory:["<b>Boosting</b> trains weak learners sequentially; each focuses on the previous errors, reducing <b>bias</b>.",
+            "AdaBoost re-weights misclassified samples; Gradient Boosting fits the residuals.",
+            "Lower <code>learning_rate</code> with more estimators generalizes better."],
+    libs:["scikit-learn"],
+    params:[["n_estimators","Number of boosting rounds"],["learning_rate","Shrinks each learner's contribution"],["max_depth","Depth of weak learners (Gradient Boosting)"]],
+    code:`from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
+
+X, y = load_breast_cancer(return_X_y=True)
+
+ada = AdaBoostClassifier(n_estimators=100, learning_rate=0.5, random_state=0)
+gb = GradientBoostingClassifier(n_estimators=150, learning_rate=0.1,
+                                max_depth=3, random_state=0)
+
+print("AdaBoost:", cross_val_score(ada, X, y, cv=5).mean())
+print("GradientBoosting:", cross_val_score(gb, X, y, cv=5).mean())` },
+
+  { unit:"Unit 3", title:"Different Ways to Combine Classifiers",
+    theory:["<b>Voting</b>: hard (majority) or soft (average probabilities).",
+            "<b>Stacking</b>: a meta-model learns from base-model predictions.",
+            "Also bagging and boosting. Diverse base models help most."],
+    libs:["scikit-learn"],
+    params:[["voting","'hard' or 'soft'"],["estimators","List of (name, model)"],["final_estimator","Meta-learner for stacking"]],
+    code:`from sklearn.datasets import load_wine
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import VotingClassifier, StackingClassifier
+
+X, y = load_wine(return_X_y=True)
+base = [("lr", LogisticRegression(max_iter=2000)),
+        ("dt", DecisionTreeClassifier(max_depth=4)),
+        ("knn", KNeighborsClassifier(5))]
+
+vote = VotingClassifier(base, voting="soft")
+stack = StackingClassifier(base, final_estimator=LogisticRegression(max_iter=2000))
+for name, m in [("Voting", vote), ("Stacking", stack)]:
+    print(name, cross_val_score(m, X, y, cv=5).mean())` },
+
+  { unit:"Unit 3", title:"Basic Statistics",
+    theory:["Mean, median, variance, standard deviation describe data; <b>covariance/correlation</b> show relationships.",
+            "<b>Gaussian</b>: <code>N(μ, σ²)</code>; ~68% of data lies within 1σ.",
+            "Bayes rule: <code>P(A|B) = P(B|A)P(A)/P(B)</code>."],
+    libs:["numpy","scipy"],
+    params:[["ddof=1","Sample (not population) variance"],["np.cov","Covariance matrix"],["norm.pdf","Gaussian density"]],
+    code:`import numpy as np
+from scipy.stats import norm
+
+data = np.random.default_rng(0).normal(50, 10, 1000)
+
+print("Mean:", data.mean(), "Median:", np.median(data))
+print("Std (sample):", data.std(ddof=1))
+
+x = np.random.default_rng(1).random((100, 2))
+print("Covariance:\\n", np.cov(x.T))
+print("Correlation:", np.corrcoef(x.T)[0, 1])
+print("P(X<60):", norm.cdf(60, loc=50, scale=10))` },
+
+  { unit:"Unit 3", title:"Gaussian Mixture Models",
+    theory:["Data is modelled as a mix of K Gaussians with weights, means and covariances.",
+            "Trained with the <b>EM algorithm</b>: E-step (responsibilities), M-step (update parameters).",
+            "Gives <b>soft</b> cluster membership; choose K with BIC/AIC."],
+    libs:["scikit-learn"],
+    params:[["n_components","Number of Gaussians K"],["covariance_type","'full', 'tied', 'diag', 'spherical'"],["max_iter","EM iterations"]],
+    code:`from sklearn.datasets import make_blobs
+from sklearn.mixture import GaussianMixture
+
+X, _ = make_blobs(n_samples=300, centers=3, random_state=0)
+
+gmm = GaussianMixture(n_components=3, covariance_type="full",
+                      max_iter=100, random_state=0).fit(X)
+print("Means:\\n", gmm.means_)
+print("Weights:", gmm.weights_)
+print("Soft membership of first point:", gmm.predict_proba(X[:1]))
+print("BIC:", gmm.bic(X))` },
+
+  { unit:"Unit 3", title:"Nearest Neighbor Methods (KNN)",
+    theory:["Classifies a point by the majority label of its <b>k nearest</b> neighbours (lazy learner, no training).",
+            "Small k overfits; large k underfits. <b>Scale features</b> first.",
+            "Distance metric: Euclidean, Manhattan, Minkowski."],
+    libs:["scikit-learn"],
+    params:[["n_neighbors","k"],["weights","'uniform' or 'distance'"],["metric","Distance measure"]],
+    code:`from sklearn.datasets import load_iris
+from sklearn.model_selection import cross_val_score
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+
+X, y = load_iris(return_X_y=True)
+for k in [1, 5, 15]:
+    knn = make_pipeline(StandardScaler(),
+          KNeighborsClassifier(n_neighbors=k, weights="distance", metric="euclidean"))
+    print("k =", k, "accuracy:", cross_val_score(knn, X, y, cv=5).mean())` },
+
+  { unit:"Unit 3", title:"Unsupervised Learning: K-Means",
+    theory:["Pick K centroids → assign each point to the nearest → recompute centroids → repeat until stable.",
+            "Minimizes <b>inertia</b> (within-cluster squared distance).",
+            "Choose K with the elbow method or <b>silhouette score</b>; scale features first."],
+    libs:["scikit-learn"],
+    params:[["n_clusters","K"],["init","'k-means++' smart start"],["n_init","Number of restarts"],["max_iter","Max iterations"]],
+    code:`from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+X, _ = make_blobs(n_samples=300, centers=4, random_state=0)
+
+for k in range(2, 7):
+    km = KMeans(n_clusters=k, init="k-means++", n_init=10,
+                max_iter=300, random_state=0).fit(X)
+    print(k, "inertia:", round(km.inertia_, 1),
+          "silhouette:", round(silhouette_score(X, km.labels_), 3))` },
+
+  { unit:"Unit 4", title:"Linear Discriminant Analysis (LDA)",
+    theory:["Supervised: projects data to maximize <b>between-class</b> separation vs <b>within-class</b> scatter.",
+            "At most <code>classes − 1</code> components.",
+            "Works as both a classifier and a dimensionality reducer."],
+    libs:["scikit-learn"],
+    params:[["n_components","Output dimensions (≤ classes−1)"],["solver","'svd', 'lsqr', 'eigen'"]],
+    code:`from sklearn.datasets import load_iris
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
+X, y = load_iris(return_X_y=True)
+lda = LinearDiscriminantAnalysis(n_components=2, solver="svd")
+X2 = lda.fit_transform(X, y)
+
+print("Shape:", X2.shape)
+print("Explained variance ratio:", lda.explained_variance_ratio_)
+print("Classifier accuracy:", lda.score(X, y))` },
+
+  { unit:"Unit 4", title:"Principal Component Analysis (PCA)",
+    theory:["Unsupervised: finds orthogonal directions of <b>maximum variance</b> (eigenvectors of the covariance matrix).",
+            "Standardize first; keep enough components for ~95% variance.",
+            "Used for compression, noise removal, visualization."],
+    libs:["scikit-learn"],
+    params:[["n_components","Count or variance fraction (0.95)"],["explained_variance_ratio_","Variance share per component"],["whiten","Scale components to unit variance"]],
+    code:`from sklearn.datasets import load_breast_cancer
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+X, _ = load_breast_cancer(return_X_y=True)
+X = StandardScaler().fit_transform(X)
+
+pca = PCA(n_components=0.95).fit(X)
+print("Components kept:", pca.n_components_)
+print("Variance ratio:", pca.explained_variance_ratio_[:3])
+X_reduced = pca.transform(X)` },
+
+  { unit:"Unit 4", title:"Factor Analysis",
+    theory:["Explains observed variables through fewer <b>latent factors</b> plus noise: <code>x = Λf + ε</code>.",
+            "Unlike PCA, it models noise per feature.",
+            "Used in psychology, surveys, finance."],
+    libs:["scikit-learn"],
+    params:[["n_components","Number of latent factors"],["rotation","'varimax' for easier interpretation"],["components_","Factor loadings"]],
+    code:`from sklearn.datasets import load_iris
+from sklearn.decomposition import FactorAnalysis
+
+X, _ = load_iris(return_X_y=True)
+fa = FactorAnalysis(n_components=2, rotation="varimax", random_state=0)
+F = fa.fit_transform(X)
+
+print("Loadings:\\n", fa.components_)
+print("Noise variance:", fa.noise_variance_)` },
+
+  { unit:"Unit 4", title:"Independent Component Analysis (ICA)",
+    theory:["Separates a mixture into <b>statistically independent</b> non-Gaussian sources (cocktail-party problem).",
+            "Model: <code>X = S·Aᵀ</code>; ICA recovers S.",
+            "PCA gives uncorrelated components; ICA gives independent ones."],
+    libs:["scikit-learn","numpy"],
+    params:[["n_components","Number of sources"],["whiten","Pre-whitening step"],["max_iter","FastICA iterations"]],
+    code:`import numpy as np
+from sklearn.decomposition import FastICA
+
+t = np.linspace(0, 8, 2000)
+S = np.c_[np.sin(2 * t), np.sign(np.sin(3 * t))]   # true sources
+A = np.array([[1, 1], [0.5, 2]])                    # mixing matrix
+X = S @ A.T                                         # observed mixtures
+
+ica = FastICA(n_components=2, whiten="unit-variance", max_iter=500, random_state=0)
+S_est = ica.fit_transform(X)
+print("Recovered sources shape:", S_est.shape)` },
+
+  { unit:"Unit 4", title:"Locally Linear Embedding & Isomap",
+    theory:["Both are <b>manifold learning</b> methods for non-linear dimensionality reduction.",
+            "<b>LLE</b>: preserves each point's linear reconstruction from its neighbours.",
+            "<b>Isomap</b>: preserves <b>geodesic</b> distances on a neighbour graph."],
+    libs:["scikit-learn"],
+    params:[["n_neighbors","Neighbourhood size (key parameter)"],["n_components","Target dimensions"],["method","LLE variant: 'standard', 'modified'"]],
+    code:`from sklearn.datasets import make_swiss_roll
+from sklearn.manifold import LocallyLinearEmbedding, Isomap
+
+X, _ = make_swiss_roll(n_samples=1000, random_state=0)
+
+lle = LocallyLinearEmbedding(n_neighbors=12, n_components=2, random_state=0)
+X_lle = lle.fit_transform(X)
+
+iso = Isomap(n_neighbors=12, n_components=2)
+X_iso = iso.fit_transform(X)
+print(X_lle.shape, X_iso.shape)` },
+
+  { unit:"Unit 4", title:"Least Squares Optimization",
+    theory:["Minimize <code>‖Ax − b‖²</code>. Normal equation: <code>x = (AᵀA)⁻¹Aᵀb</code>.",
+            "Solve with QR/SVD (stable) or gradient descent for large data.",
+            "Add L2 penalty (Ridge) for stability."],
+    libs:["numpy","scipy"],
+    params:[["rcond","Cutoff for small singular values"],["lr","Gradient descent step size"],["method","'lm', 'trf' in least_squares"]],
+    code:`import numpy as np
+from scipy.optimize import least_squares
+
+rng = np.random.default_rng(0)
+x = np.linspace(0, 5, 50)
+y = 2.5 * x + 1 + rng.normal(0, 0.5, 50)
+
+# Closed form
+A = np.c_[x, np.ones_like(x)]
+coef, *_ = np.linalg.lstsq(A, y, rcond=None)
+print("Slope, intercept:", coef)
+
+# Iterative optimizer
+res = least_squares(lambda p: p[0] * x + p[1] - y, x0=[0, 0], method="lm")
+print("Optimizer result:", res.x)` },
+
+  { unit:"Unit 4", title:"Genetic Algorithms & Operators",
+    theory:["Evolutionary search: <b>population → fitness → selection → crossover → mutation → next generation</b>.",
+            "<b>Offspring</b> come from crossover (mixing two parents) and mutation (random bit flips).",
+            "Selection: roulette wheel, tournament, elitism. Uses: optimization, scheduling, feature selection."],
+    libs:["numpy","random"],
+    params:[["pop_size","Individuals per generation"],["p_cross","Crossover probability"],["p_mut","Mutation rate per gene"],["generations","Number of iterations"]],
+    code:`import random
+
+N, POP, GEN, P_CROSS, P_MUT = 20, 30, 40, 0.8, 0.02
+fitness = lambda ind: sum(ind)                  # OneMax: maximize 1s
+
+pop = [[random.randint(0, 1) for _ in range(N)] for _ in range(POP)]
+for g in range(GEN):
+    def select():                               # tournament of 3
+        return max(random.sample(pop, 3), key=fitness)
+    new = [max(pop, key=fitness)]               # elitism
+    while len(new) < POP:
+        p1, p2 = select(), select()
+        if random.random() < P_CROSS:           # one-point crossover
+            cut = random.randint(1, N - 1)
+            p1 = p1[:cut] + p2[cut:]
+        child = [1 - b if random.random() < P_MUT else b for b in p1]  # mutation
+        new.append(child)
+    pop = new
+print("Best fitness:", fitness(max(pop, key=fitness)), "/", N)` },
+
+  { unit:"Unit 5", title:"Reinforcement Learning: Getting Lost Example",
+    theory:["An <b>agent</b> takes actions in an environment and receives <b>rewards</b>; goal: maximize cumulative reward.",
+            "<b>Q-learning</b>: <code>Q(s,a) ← Q + α[r + γ max Q(s',a') − Q]</code>.",
+            "Example: a robot lost in a grid finds its way to the goal, with ε-greedy exploration."],
+    libs:["numpy"],
+    params:[["alpha","Learning rate"],["gamma","Discount factor"],["epsilon","Exploration probability"],["episodes","Training runs"]],
+    code:`import numpy as np
+rng = np.random.default_rng(0)
+
+SIZE, GOAL = 4, 15                       # 4x4 grid, goal at last cell
+Q = np.zeros((SIZE * SIZE, 4))           # actions: up, down, left, right
+moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+alpha, gamma, epsilon = 0.1, 0.9, 0.2
+
+def step(s, a):
+    r, c = divmod(s, SIZE)
+    r = min(max(r + moves[a][0], 0), SIZE - 1)
+    c = min(max(c + moves[a][1], 0), SIZE - 1)
+    s2 = r * SIZE + c
+    return s2, (10 if s2 == GOAL else -1)
+
+for _ in range(500):
+    s = 0
+    while s != GOAL:
+        a = rng.integers(4) if rng.random() < epsilon else Q[s].argmax()
+        s2, r = step(s, a)
+        Q[s, a] += alpha * (r + gamma * Q[s2].max() - Q[s, a])
+        s = s2
+print("Best action per state:\\n", Q.argmax(1).reshape(SIZE, SIZE))` },
+
+  { unit:"Unit 5", title:"Sampling, Proposal Distribution & MCMC",
+    theory:["<b>Sampling</b> approximates integrals/expectations by averaging draws.",
+            "<b>Proposal distribution</b> q(x'|x) suggests the next point; Metropolis accepts with probability <code>min(1, p(x')/p(x))</code>.",
+            "A <b>Markov chain</b> built this way converges to the target p(x). Discard burn-in samples."],
+    libs:["numpy"],
+    params:[["step","Proposal std-dev (too big/small = poor mixing)"],["burn_in","Samples discarded at start"],["n_samples","Chain length"]],
+    code:`import numpy as np
+rng = np.random.default_rng(0)
+
+def target(x):                      # unnormalized mix of two Gaussians
+    return np.exp(-0.5 * (x - 2) ** 2) + 0.5 * np.exp(-0.5 * (x + 2) ** 2)
+
+n_samples, burn_in, step = 20000, 2000, 1.5
+x, chain = 0.0, []
+for _ in range(n_samples):
+    prop = x + rng.normal(0, step)               # proposal
+    if rng.random() < min(1, target(prop) / target(x)):
+        x = prop                                  # accept
+    chain.append(x)
+
+samples = np.array(chain[burn_in:])
+print("Mean:", samples.mean(), "Std:", samples.std())` },
+
+  { unit:"Unit 5", title:"Graphical Models: Bayesian Networks & MRFs",
+    theory:["<b>Bayesian network</b>: directed acyclic graph with conditional probability tables; <code>P(X) = Π P(Xᵢ | parents)</code>.",
+            "<b>Markov Random Field</b>: undirected graph; joint = product of clique potentials / Z.",
+            "Inference: variable elimination, belief propagation, sampling."],
+    libs:["pgmpy"],
+    params:[["add_edges_from","Defines the DAG structure"],["TabularCPD","Conditional probability table"],["VariableElimination","Exact inference"]],
+    code:`# pip install pgmpy
+from pgmpy.models import BayesianNetwork
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.inference import VariableElimination
+
+model = BayesianNetwork([("Rain", "WetGrass"), ("Sprinkler", "WetGrass")])
+model.add_cpds(
+    TabularCPD("Rain", 2, [[0.8], [0.2]]),
+    TabularCPD("Sprinkler", 2, [[0.6], [0.4]]),
+    TabularCPD("WetGrass", 2,
+        [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]],
+        evidence=["Rain", "Sprinkler"], evidence_card=[2, 2]))
+
+infer = VariableElimination(model)
+print(infer.query(["Rain"], evidence={"WetGrass": 1}))` },
+
+  { unit:"Unit 5", title:"Hidden Markov Models",
+    theory:["Hidden states follow a Markov chain; each state emits an observation.",
+            "Parameters: start probabilities π, transition matrix A, emission B.",
+            "Algorithms: <b>Forward</b> (likelihood), <b>Viterbi</b> (best state path), <b>Baum-Welch</b> (training)."],
+    libs:["hmmlearn","numpy"],
+    params:[["n_components","Number of hidden states"],["covariance_type","Emission covariance type"],["n_iter","Baum-Welch iterations"]],
+    code:`# pip install hmmlearn
+import numpy as np
+from hmmlearn.hmm import GaussianHMM
+
+rng = np.random.default_rng(0)
+X = np.r_[rng.normal(0, 1, (100, 1)), rng.normal(5, 1, (100, 1))]
+
+hmm = GaussianHMM(n_components=2, covariance_type="diag", n_iter=100, random_state=0)
+hmm.fit(X)
+
+states = hmm.predict(X)                     # Viterbi path
+print("Transition matrix:\\n", hmm.transmat_)
+print("State means:", hmm.means_.ravel())
+print("Log-likelihood:", hmm.score(X))` },
+
+  { unit:"Unit 5", title:"Tracking Methods (Kalman Filter)",
+    theory:["Tracking estimates a moving object's state from noisy measurements.",
+            "<b>Kalman filter</b>: predict with the motion model, then update with the measurement (optimal for linear-Gaussian systems).",
+            "Non-linear cases use the Extended/Unscented Kalman filter or particle filters."],
+    libs:["numpy"],
+    params:[["F","State transition (motion) matrix"],["H","Measurement matrix"],["Q","Process noise covariance"],["R","Measurement noise covariance"]],
+    code:`import numpy as np
+rng = np.random.default_rng(0)
+
+dt = 1.0
+F = np.array([[1, dt], [0, 1]])        # state: [position, velocity]
+H = np.array([[1, 0]])                 # we only measure position
+Q = 0.01 * np.eye(2); R = np.array([[4.0]])
+
+x, P = np.zeros((2, 1)), np.eye(2)
+true_pos = np.arange(0, 50, 1.0)
+for z in true_pos + rng.normal(0, 2, 50):
+    x, P = F @ x, F @ P @ F.T + Q                       # predict
+    K = P @ H.T @ np.linalg.inv(H @ P @ H.T + R)        # Kalman gain
+    x = x + K @ (np.array([[z]]) - H @ x)               # update
+    P = (np.eye(2) - K @ H) @ P
+print("Estimated position/velocity:", x.ravel())` }
+  ];
+
+  // keep topics in syllabus order (stable sort by unit)
+  T = $.map(T, function (t, i) { t._i = i; return t; })
+        .sort(function (a, b) { return a.unit.localeCompare(b.unit) || a._i - b._i; });
+
+  /* ---------- RENDER ---------- */
+  var current = 0;
+
+  function buildMenu(filter) {
+    var html = "", lastUnit = "";
+    $.each(T, function (i, t) {
+      if (filter && t.title.toLowerCase().indexOf(filter) === -1) return;
+      if (t.unit !== lastUnit) { html += '<div class="unit">' + t.unit + '</div>'; lastUnit = t.unit; }
+      html += '<button class="topic' + (i === current ? ' active' : '') + '" data-i="' + i + '">' + t.title + '</button>';
+    });
+    $("#menu").html(html || '<p class="small text-muted mt-3">No topic found.</p>');
+  }
+
+  function show(i) {
+    current = i;
+    var t = T[i];
+    var theory = $.map(t.theory, function (p) { return "<li>" + p + "</li>"; }).join("");
+    var libs = $.map(t.libs, function (l) { return "<span>" + l + "</span>"; }).join("");
+    var params = $.map(t.params, function (p) {
+      return "<tr><td>" + $("<i>").text(p[0]).html() + "</td><td>" + p[1] + "</td></tr>";
+    }).join("");
+
+    $("#content").html(
+      '<div class="panel mb-3"><h2 class="h4">' + t.title + '</h2>' +
+        '<ul class="mb-0">' + theory + '</ul></div>' +
+      '<div class="panel">' +
+        '<h3 class="h5">Python code</h3>' +
+        '<div class="libs mb-2"><small class="text-muted me-2">Libraries:</small>' + libs + '</div>' +
+        '<div class="codebar d-flex justify-content-between"><span>python</span>' +
+          '<button id="copy" class="btn btn-sm btn-outline-light py-0">Copy</button></div>' +
+        '<pre><code class="language-python"></code></pre>' +
+        '<h3 class="h6 mt-3">Important parameters</h3>' +
+        '<table class="table table-sm params mb-0"><tbody>' + params + '</tbody></table>' +
+      '</div>'
+    );
+    $("#content pre code").text(t.code);
+    hljs.highlightElement($("#content pre code")[0]);
+    buildMenu($("#search").val().toLowerCase());
+    $("#prev").prop("disabled", i === 0);
+    $("#next").prop("disabled", i === T.length - 1);
+    location.hash = "t" + i;
+    window.scrollTo({ top: 0 });
+  }
+
+  $("#menu").on("click", ".topic", function () { show($(this).data("i")); });
+  $("#search").on("input", function () { buildMenu($(this).val().toLowerCase()); });
+  $("#prev").on("click", function () { if (current > 0) show(current - 1); });
+  $("#next").on("click", function () { if (current < T.length - 1) show(current + 1); });
+  $("#content").on("click", "#copy", function () {
+    var btn = $(this), text = T[current].code;
+    var done = function () { btn.text("Copied"); setTimeout(function () { btn.text("Copy"); }, 1200); };
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done); }
+    else { var ta = $("<textarea>").val(text).appendTo("body").select(); document.execCommand("copy"); ta.remove(); done(); }
+  });
+
+  var start = parseInt((location.hash || "").replace("#t", ""), 10);
+  show(isNaN(start) || !T[start] ? 0 : start);
+});
+</script>
+</body>
+</html>
