@@ -26,6 +26,15 @@
   pre code{font-size:.85rem;padding:1rem!important}
   .codebar{background:#21252b;color:#abb2bf;border-radius:.5rem .5rem 0 0;padding:.4rem .9rem;font-size:.8rem}
   .libs span{background:var(--soft);color:var(--accent);border-radius:1rem;padding:.15rem .7rem;font-size:.82rem;margin:0 .35rem .35rem 0;display:inline-block;font-family:ui-monospace,Consolas,monospace}
+  .dflow,.dkids{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+  .dbranch{display:flex;flex-direction:column;align-items:center}
+  .dkids{justify-content:center}
+  .dbox{background:var(--soft);border:1px solid var(--accent);border-radius:.5rem;padding:.4rem .7rem;text-align:center;font-size:.85rem}
+  .dbox small{display:block;color:#51606f;font-size:.74rem}
+  .darr{color:var(--accent);font-size:1.1rem}.darr.down{font-size:.9rem;margin:.15rem 0 .35rem}
+  .dsvg{width:100%;max-width:520px;display:block;margin:0 auto}
+  .dcap{font-size:.82rem;color:#51606f;margin:.6rem 0 0;text-align:center}
+  .apps li{margin-bottom:.25rem}
   :focus-visible{outline:3px solid #ffb703;outline-offset:2px}
   @media(min-width:768px){#sidebar{height:100vh}}
 </style>
@@ -854,6 +863,159 @@ print("Estimated position/velocity:", x.ravel())` }
   T = $.map(T, function (t, i) { t._i = i; return t; })
         .sort(function (a, b) { return a.unit.localeCompare(b.unit) || a._i - b._i; });
 
+  /* ---------- DIAGRAMS & APPLICATIONS (keyed by topic title) ---------- */
+  var BLUE = "#2457c5", ORG = "#e07a1f", GRN = "#2a9d5c", GRY = "#8a97a6";
+  function rnd(seed) { return function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }; }
+  function box(s) { var p = String(s).split("|"); return '<div class="dbox"><b>' + p[0] + '</b>' + (p[1] ? '<small>' + p[1] + '</small>' : '') + '</div>'; }
+  function svg(inner, cap, h) {
+    return '<svg viewBox="0 0 340 ' + (h || 220) + '" class="dsvg" role="img" aria-label="' + (cap || "diagram") + '">' +
+      '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#51606f"/></marker></defs>' + inner + '</svg>';
+  }
+  function dots(arr, col) { return $.map(arr, function (p) { return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="4" fill="' + col + '" opacity=".85"/>'; }).join(""); }
+  function cloud(r, cx, cy, sp, n) { var a = []; for (var i = 0; i < n; i++) a.push([cx + (r() - .5) * 2 * sp, cy + (r() - .5) * 2 * sp]); return a; }
+  var AX = '<path d="M25 200 H325 M25 200 V15" stroke="#9aa5b1" fill="none"/>';
+  function ln(x1, y1, x2, y2, c, w, dash, arrow) { return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + c + '" stroke-width="' + (w || 2) + '"' + (dash ? ' stroke-dasharray="5 4"' : '') + (arrow ? ' marker-end="url(#ah)"' : '') + '/>'; }
+  function txt(x, y, s, c, sz, anchor) { return '<text x="' + x + '" y="' + y + '" font-size="' + (sz || 11) + '" fill="' + (c || "#1c2733") + '" text-anchor="' + (anchor || "middle") + '">' + s + '</text>'; }
+
+  var D = {
+    flow: function (d) { return '<div class="dflow">' + $.map(d.s, function (x) { return box(x); }).join('<span class="darr">&#10140;</span>') + '</div>'; },
+    branch: function (d) { return '<div class="dbranch">' + box(d.r) + '<div class="darr down">&#9660;</div><div class="dkids">' + $.map(d.s, function (x) { return box(x); }).join("") + '</div></div>'; },
+    net: function (d) {
+      var L = d.s, W = 340, H = 210, xs = [], lines = "", circ = "";
+      $.each(L, function (i, n) { var x = 40 + i * (W - 80) / (L.length - 1), col = []; for (var j = 0; j < n; j++) col.push([x, 25 + (j + .5) * (H - 50) / n]); xs.push(col); });
+      for (var i = 0; i < xs.length - 1; i++) $.each(xs[i], function (_, a) { $.each(xs[i + 1], function (_, b) { lines += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#b9c4d3"/>'; }); });
+      $.each(xs, function (i, col) { var c = i === 0 ? BLUE : i === xs.length - 1 ? ORG : GRN; $.each(col, function (_, p) { circ += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="9" fill="' + c + '"/>'; }); });
+      var lab = txt(xs[0][0][0], 205, "Input", GRY) + txt(xs[xs.length - 1][0][0], 205, "Output", GRY) + txt(W / 2, 205, "Hidden", GRY);
+      return svg(lines + circ + lab, "Neural network layers", 215);
+    },
+    tree: function (d) {
+      var P = [[170, 28], [90, 88], [250, 88], [50, 152], [130, 152], [210, 152], [290, 152]], E = [[0, 1], [0, 2], [1, 3], [1, 4], [2, 5], [2, 6]], o = "";
+      $.each(E, function (_, e) { if (d.s[e[0]] && d.s[e[1]]) o += ln(P[e[0]][0], P[e[0]][1] + 12, P[e[1]][0], P[e[1]][1] - 12, GRY, 1.5); });
+      $.each(P, function (i, p) { if (!d.s[i]) return; var leaf = i > 2 || (!d.s[2 * i + 1] && !d.s[2 * i + 2]);
+        o += '<rect x="' + (p[0] - 40) + '" y="' + (p[1] - 13) + '" width="80" height="26" rx="6" fill="' + (leaf ? "#fdeedd" : "#e8eef9") + '" stroke="' + (leaf ? ORG : BLUE) + '"/>' + txt(p[0], p[1] + 4, d.s[i], null, 9.5); });
+      o += txt(110, 62, "yes", GRY, 9) + txt(230, 62, "no", GRY, 9);
+      return svg(o, "Decision tree", 180);
+    },
+    graph: function (d) {
+      var o = "";
+      $.each(d.e, function (_, e) { var a = d.n[e[0]], b = d.n[e[1]], dx = b[1] - a[1], dy = b[2] - a[2], t = Math.min(dx ? 36 / Math.abs(dx) : 9, dy ? 15 / Math.abs(dy) : 9);
+        o += ln(a[1] + dx * t, a[2] + dy * t, b[1] - dx * t, b[2] - dy * t, "#51606f", 1.5, false, true); });
+      $.each(d.n, function (_, n) { var c = n[3] === "o" ? ORG : BLUE;
+        o += '<rect x="' + (n[1] - 34) + '" y="' + (n[2] - 13) + '" width="68" height="26" rx="13" fill="' + (n[3] === "o" ? "#fdeedd" : "#e8eef9") + '" stroke="' + c + '"/>' + txt(n[1], n[2] + 4, n[0], null, 10.5); });
+      return svg(o, "Graphical model", d.h || 140);
+    },
+    scatter: function (d) {
+      var r = rnd(7), o = AX, m = d.m, i, a, b, p;
+      if (m === "line" || m === "margin") {
+        a = cloud(r, 85, 155, 28, 16); b = cloud(r, 255, 65, 28, 16);
+        o += dots(a, BLUE) + dots(b, ORG) + ln(130, 30, 210, 190, "#1c2733", 2.5);
+        if (m === "margin") o += ln(112, 21, 192, 181, GRY, 1.5, true) + ln(148, 39, 228, 199, GRY, 1.5, true) + txt(250, 190, "margin", GRY, 10);
+        else o += txt(240, 190, "decision boundary", GRY, 10);
+      } else if (m === "reg" || m === "resid") {
+        a = []; for (i = 0; i < 18; i++) { var x = 40 + i * 15.5, y = 175 - .55 * (x - 40) + (r() - .5) * 40; a.push([x, y]); if (m === "resid") o += ln(x, y, x, 175 - .55 * (x - 40), "#c0392b", 1, true); }
+        o += ln(35, 178, 315, 24, "#1c2733", 2.5) + dots(a, BLUE) + txt(250, 190, m === "resid" ? "residuals" : "best-fit line", GRY, 10);
+      } else if (m === "curve") {
+        a = []; p = "M30,110"; for (i = 0; i <= 28; i++) { var xx = 30 + i * 10, yy = 110 - 60 * Math.sin(i / 28 * 2 * Math.PI); p += " L" + xx + "," + yy; if (i % 3 === 0) a.push([xx, yy + (r() - .5) * 24]); }
+        o += '<path d="' + p + '" fill="none" stroke="' + ORG + '" stroke-width="2.5"/>' + dots(a, BLUE) + txt(250, 25, "smooth fit", GRY, 10);
+      } else if (m === "clusters" || m === "gmm") {
+        var C = [[80, 150, BLUE], [250, 150, ORG], [170, 55, GRN]];
+        $.each(C, function (_, c) { o += dots(cloud(r, c[0], c[1], 22, 14), c[2]);
+          o += m === "gmm" ? '<ellipse cx="' + c[0] + '" cy="' + c[1] + '" rx="42" ry="30" fill="none" stroke="' + c[2] + '" stroke-dasharray="4 3" stroke-width="1.5"/>'
+                           : txt(c[0], c[1] + 5, "&#10005;", "#1c2733", 18); });
+      } else if (m === "knn") {
+        o += dots(cloud(r, 115, 140, 34, 18), BLUE) + dots(cloud(r, 225, 80, 34, 18), ORG) +
+             '<circle cx="170" cy="110" r="48" fill="none" stroke="' + GRN + '" stroke-dasharray="5 4" stroke-width="2"/>' + txt(170, 115, "&#9733;", GRN, 20) + txt(250, 190, "k nearest neighbours", GRY, 10);
+      } else if (m === "proj" || m === "lda") {
+        for (i = 0; i < 26; i++) { var t = (r() - .5) * 2, n = (r() - .5) * 26, cls = m === "lda" && i % 2, off = cls ? 28 : -10;
+          o += dots([[170 + t * 100 - (n + off) * .4, 110 - t * 42 + (n + off) * .9]], m === "lda" ? (cls ? ORG : BLUE) : BLUE); }
+        o += m === "lda" ? ln(120, 170, 220, 50, "#1c2733", 2.5, false, true) + txt(236, 48, "LD1", null, 11)
+                         : ln(170, 110, 290, 60, "#1c2733", 2.5, false, true) + ln(170, 110, 195, 165, "#c0392b", 2, false, true) + txt(300, 58, "PC1", null, 11) + txt(205, 178, "PC2", "#c0392b", 11);
+      } else if (m === "bell") {
+        p = "M30,200"; for (i = 0; i <= 56; i++) { var gx = 30 + i * 5, gy = 200 - 165 * Math.exp(-.5 * Math.pow((gx - 170) / 50, 2)); p += " L" + gx + "," + gy; }
+        o += '<path d="' + p + ' L310,200 Z" fill="#e8eef9" stroke="' + BLUE + '" stroke-width="2"/>' + ln(120, 200, 120, 80, GRY, 1.5, true) + ln(220, 200, 220, 80, GRY, 1.5, true) + ln(170, 200, 170, 35, "#1c2733", 1.5, true) +
+             txt(170, 215, "&mu;", null, 12) + txt(170, 130, "68% within &plusmn;1&sigma;", BLUE, 10);
+      }
+      return svg(o, "Chart", 225);
+    }
+  };
+
+  var EXTRA = {
+    "Types of Learning": { d: { t: "branch", r: "Machine Learning", s: ["Supervised|labeled data", "Unsupervised|find patterns", "Semi-supervised|few labels", "Reinforcement|rewards"] },
+      a: ["Spam filtering and fraud detection (supervised)", "Customer segmentation (unsupervised)", "Medical image labelling with few labelled scans (semi-supervised)", "Game-playing agents and robot control (reinforcement)"] },
+    "Supervised Learning": { d: { t: "flow", s: ["Labeled data", "Split train/test", "Train model", "Evaluate", "Predict"] },
+      a: ["Email spam detection", "House price prediction", "Disease diagnosis from reports", "Credit risk scoring"] },
+    "The Brain and the Neuron": { d: { t: "flow", s: ["Inputs x", "&times; Weights w", "&Sigma; + bias b", "Activation f", "Output a"], cap: "Artificial neuron: a = f(&Sigma;wx + b)" },
+      a: ["Basis of every deep-learning model", "Simple binary decisions (pass/fail, yes/no)", "Neuromorphic and brain-inspired computing research"] },
+    "Design of a Learning System": { d: { t: "flow", s: ["Define problem", "Collect data", "Preprocess", "Choose model", "Train", "Evaluate", "Deploy"] },
+      a: ["Building a product recommendation engine", "Predictive maintenance in factories", "End-to-end ML pipelines (MLOps)"] },
+    "Perspectives and Issues in ML": { d: { t: "branch", r: "Issues in ML", s: ["Overfitting|memorizes noise", "Underfitting|too simple", "Poor data|noise, bias", "Cost & privacy|compute, ethics"] },
+      a: ["Auditing models for bias in hiring/loans", "Model validation before hospital deployment", "Privacy-preserving ML (federated learning)"] },
+    "Concept Learning and Find-S": { d: { t: "flow", s: ["Start: most specific h", "Take positive example", "Mismatch &rarr; '?'", "Next example", "Final hypothesis"] },
+      a: ["Learning rules such as 'good day for sports'", "Simple rule extraction from yes/no records", "Teaching tool for hypothesis-space search"] },
+    "Version Space & Candidate Elimination": { d: { t: "branch", r: "Version space", s: ["S boundary|most specific", "G boundary|most general", "Positive example|generalize S", "Negative example|specialize G"] },
+      a: ["Learning concept definitions from labelled examples", "Rule-based expert systems", "Interactive concept teaching systems"] },
+    "Perceptron & Linear Separability": { d: { t: "scatter", m: "line", cap: "A line separates the two classes (linearly separable)" },
+      a: ["Logic gates (AND/OR)", "Basic binary classifiers (e.g. pass/fail)", "Building block of deep networks"] },
+    "Linear Regression": { d: { t: "scatter", m: "reg", cap: "Line minimizing the squared error" },
+      a: ["House price prediction", "Sales and demand forecasting", "Salary vs experience analysis", "Trend analysis in finance"] },
+    "Multilayer Perceptron (MLP)": { d: { t: "net", s: [3, 4, 4, 2], cap: "Input layer &rarr; hidden layers &rarr; output layer" },
+      a: ["Handwritten digit recognition", "Credit scoring", "Medical diagnosis", "Stock and weather prediction"] },
+    "Feedforward & Backpropagation": { d: { t: "flow", s: ["Input", "Forward pass", "Loss E", "Backward: &part;E/&part;w", "Update weights"], cap: "Repeat for every epoch until the loss stops falling" },
+      a: ["Training every neural network (CNN, RNN, Transformers)", "Speech recognition", "Image classification"] },
+    "RBF and Splines": { d: { t: "scatter", m: "curve", cap: "A smooth curve through noisy points" },
+      a: ["Curve fitting and interpolation of sensor data", "Computer graphics and CAD curves", "Function approximation"] },
+    "RBF Network & Curse of Dimensionality": { d: { t: "net", s: [2, 5, 1], cap: "Hidden units are Gaussian RBFs; the output is a linear sum" },
+      a: ["Time-series prediction", "Control systems", "Pattern classification with small data", "Anything needing local (distance-based) responses"] },
+    "MLP in Practice & Examples": { d: { t: "flow", s: ["Scale data", "Split", "Build MLP", "Train + early stop", "Test"] },
+      a: ["Digit recognition (MNIST-style)", "House price regression", "Spam and sentiment classification", "Loan approval"] },
+    "Interpolation & Basis Functions": { d: { t: "flow", s: ["x", "Basis &phi;(x)", "Linear weights", "f(x)"], cap: "Non-linear fit made from a linear model on basis functions" },
+      a: ["Polynomial trend fitting", "Smooth curves in graphics", "Missing-value estimation in sensor data"] },
+    "Support Vector Machines": { d: { t: "scatter", m: "margin", cap: "Maximum-margin hyperplane" },
+      a: ["Text and spam classification", "Face detection", "Bioinformatics (gene/protein classification)", "Handwriting recognition"] },
+    "Decision Trees & Constructing Them": { d: { t: "tree", s: ["Petal len &lt; 2.5?", "Setosa", "Petal wid &lt; 1.8?", null, null, "Versicolor", "Virginica"] },
+      a: ["Loan approval", "Medical diagnosis flowcharts", "Customer churn prediction", "Rule extraction for explainable AI"] },
+    "Classification and Regression Trees (CART)": { d: { t: "tree", s: ["Age &lt; 30?", "Income &lt; 40k?", "Income &lt; 70k?", "Avg 20", "Avg 35", "Avg 50", "Avg 80"], cap: "Regression tree: each leaf predicts the mean of its samples" },
+      a: ["House and insurance price estimation", "Credit risk classification", "Demand forecasting", "Feature-importance analysis"] },
+    "Ensemble Learning: Bagging": { d: { t: "branch", r: "Training data", s: ["Bootstrap sample 1|Tree 1", "Bootstrap sample 2|Tree 2", "Bootstrap sample 3|Tree 3", "Vote / average|final output"] },
+      a: ["Random Forest for fraud detection", "Credit scoring", "Gene-expression classification", "Land-cover mapping from satellite images"] },
+    "Ensemble Learning: Boosting": { d: { t: "flow", s: ["Weak learner 1", "Re-weight errors", "Weak learner 2", "Re-weight errors", "Weak learner 3", "Weighted sum"] },
+      a: ["Web search ranking", "Click-through-rate prediction", "Face detection (AdaBoost / Viola-Jones)", "Winning tabular-data competitions (XGBoost)"] },
+    "Different Ways to Combine Classifiers": { d: { t: "branch", r: "Combining models", s: ["Voting|majority / avg prob", "Bagging|parallel", "Boosting|sequential", "Stacking|meta-learner"] },
+      a: ["Competition-winning ensembles", "Medical diagnosis with several models", "Fraud detection systems"] },
+    "Basic Statistics": { d: { t: "scatter", m: "bell", cap: "Normal distribution with mean &mu; and spread &sigma;" },
+      a: ["Exploratory data analysis", "Outlier detection (z-scores)", "Quality control", "Hypothesis testing and A/B tests"] },
+    "Gaussian Mixture Models": { d: { t: "scatter", m: "gmm", cap: "Each cluster is a Gaussian with its own mean and covariance" },
+      a: ["Speaker identification", "Soft customer segmentation", "Image segmentation", "Anomaly detection"] },
+    "Nearest Neighbor Methods (KNN)": { d: { t: "scatter", m: "knn", cap: "The star takes the majority label of its k nearest points" },
+      a: ["Recommendation systems", "Handwriting recognition", "Medical case similarity search", "Missing-value imputation"] },
+    "Unsupervised Learning: K-Means": { d: { t: "scatter", m: "clusters", cap: "Points grouped around centroids (&#10005;)" },
+      a: ["Customer segmentation", "Image compression (colour quantization)", "Document clustering", "Market basket grouping"] },
+    "Linear Discriminant Analysis (LDA)": { d: { t: "scatter", m: "lda", cap: "Projection axis that best separates the classes" },
+      a: ["Face recognition (Fisherfaces)", "Bankruptcy and risk prediction", "Medical classification", "Feature reduction before classification"] },
+    "Principal Component Analysis (PCA)": { d: { t: "scatter", m: "proj", cap: "PC1 captures the most variance; PC2 is orthogonal" },
+      a: ["Data compression and visualization", "Noise removal", "Face recognition (Eigenfaces)", "Genomics and finance data reduction"] },
+    "Factor Analysis": { d: { t: "branch", r: "Observed variables x1 &hellip; x6", s: ["Factor F1|drives x1&ndash;x3", "Factor F2|drives x4&ndash;x6", "Noise &epsilon;|unique to each x"] },
+      a: ["Psychology and personality tests", "Survey analysis (market research)", "Finance risk factors", "Questionnaire design"] },
+    "Independent Component Analysis (ICA)": { d: { t: "flow", s: ["Sources s1, s2", "Mixing A", "Observed x1, x2", "Whiten + FastICA", "Recovered sources"] },
+      a: ["Cocktail-party speech separation", "EEG/MEG artifact removal", "Fetal ECG extraction", "Financial signal separation"] },
+    "Locally Linear Embedding & Isomap": { d: { t: "flow", s: ["High-D data", "Neighbour graph (k)", "Local weights / geodesic distances", "Low-D embedding"] },
+      a: ["Visualizing high-dimensional data", "Face-pose and motion manifolds", "Gene-expression analysis", "Image retrieval"] },
+    "Least Squares Optimization": { d: { t: "scatter", m: "resid", cap: "Minimize the sum of squared vertical errors" },
+      a: ["Curve fitting", "Calibrating sensors and GPS", "Parameter estimation in engineering", "Training linear and Ridge models"] },
+    "Genetic Algorithms & Operators": { d: { t: "flow", s: ["Initial population", "Fitness", "Selection", "Crossover", "Mutation", "New generation"], cap: "Repeat until a stopping condition is met" },
+      a: ["Scheduling and timetabling", "Route optimization (TSP)", "Feature selection", "Neural network hyper-parameter tuning"] },
+    "Reinforcement Learning: Getting Lost Example": { d: { t: "flow", s: ["Agent", "Action a", "Environment", "State s' + reward r"], cap: "Feedback loop: the Q-table is updated after every step" },
+      a: ["Game playing (Chess, Go, Atari)", "Robot navigation", "Self-driving decisions", "Ad and recommendation optimization"] },
+    "Sampling, Proposal Distribution & MCMC": { d: { t: "flow", s: ["Start x0", "Propose x' ~ q", "Accept with min(1, p(x')/p(x))", "Store sample", "Repeat; drop burn-in"] },
+      a: ["Bayesian parameter estimation", "Sampling from complex distributions", "Physics and chemistry simulations", "Probabilistic programming"] },
+    "Graphical Models: Bayesian Networks & MRFs": { d: { t: "graph", h: 140, n: [["Rain", 85, 28, "h"], ["Sprinkler", 255, 28, "h"], ["WetGrass", 170, 105, "o"]], e: [[0, 2], [1, 2]], cap: "Bayesian network: arrows show cause &rarr; effect" },
+      a: ["Medical diagnosis", "Fault diagnosis in machines", "Image denoising and segmentation (MRFs)", "Spam filtering (Naive Bayes)"] },
+    "Hidden Markov Models": { d: { t: "graph", h: 150, n: [["State S1", 55, 30, "h"], ["State S2", 170, 30, "h"], ["State S3", 285, 30, "h"], ["Obs O1", 55, 115, "o"], ["Obs O2", 170, 115, "o"], ["Obs O3", 285, 115, "o"]], e: [[0, 1], [1, 2], [0, 3], [1, 4], [2, 5]], cap: "Hidden states emit visible observations" },
+      a: ["Speech recognition", "Part-of-speech tagging", "Gene and protein sequence analysis", "Gesture and activity recognition"] },
+    "Tracking Methods (Kalman Filter)": { d: { t: "flow", s: ["Predict state", "Get measurement z", "Kalman gain K", "Update estimate"], cap: "Repeats at every time step" },
+      a: ["GPS and navigation", "Object tracking in video", "Radar and missile guidance", "Robot localization"] }
+  };
+
   /* ---------- RENDER ---------- */
   var current = 0;
 
@@ -876,9 +1038,15 @@ print("Estimated position/velocity:", x.ravel())` }
       return "<tr><td>" + $("<i>").text(p[0]).html() + "</td><td>" + p[1] + "</td></tr>";
     }).join("");
 
+    var ex = EXTRA[t.title] || {}, diagram = "", apps = "";
+    if (ex.d && D[ex.d.t]) diagram = '<div class="panel mb-3"><h3 class="h5">Diagram</h3>' + D[ex.d.t](ex.d) +
+      (ex.d.cap ? '<p class="dcap">' + ex.d.cap + '</p>' : '') + '</div>';
+    if (ex.a) apps = '<div class="panel mt-3"><h3 class="h5">Real-world applications</h3><ul class="apps mb-0">' +
+      $.map(ex.a, function (x) { return "<li>" + x + "</li>"; }).join("") + '</ul></div>';
+
     $("#content").html(
       '<div class="panel mb-3"><h2 class="h4">' + t.title + '</h2>' +
-        '<ul class="mb-0">' + theory + '</ul></div>' +
+        '<ul class="mb-0">' + theory + '</ul></div>' + diagram +
       '<div class="panel">' +
         '<h3 class="h5">Python code</h3>' +
         '<div class="libs mb-2"><small class="text-muted me-2">Libraries:</small>' + libs + '</div>' +
@@ -887,7 +1055,7 @@ print("Estimated position/velocity:", x.ravel())` }
         '<pre><code class="language-python"></code></pre>' +
         '<h3 class="h6 mt-3">Important parameters</h3>' +
         '<table class="table table-sm params mb-0"><tbody>' + params + '</tbody></table>' +
-      '</div>'
+      '</div>' + apps
     );
     $("#content pre code").text(t.code);
     hljs.highlightElement($("#content pre code")[0]);
