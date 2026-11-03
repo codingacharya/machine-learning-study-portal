@@ -19,9 +19,9 @@ window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault()
   :root{--ink:#1c2733;--accent:#2457c5;--soft:#e8eef9;--bg:#f2f5f9}
   body{background:var(--bg);color:var(--ink)}
   h1,h2,h3,.brand{font-family:'Literata',Georgia,serif}
-  .topbar{background:var(--ink);color:#fff}
+  .topbar{background:linear-gradient(90deg,#1c2733,#24406e);color:#fff;position:sticky;top:0;z-index:1030;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   .topbar a{color:#cfe0ff;text-decoration:none;font-size:.9rem}
-  #sidebar{position:sticky;top:0;max-height:100vh;overflow-y:auto;padding:1rem .75rem}
+  #sidebar{padding:1rem .75rem;overflow-y:auto;max-height:65vh}
   .unit{font-weight:700;font-size:.85rem;margin:1rem 0 .35rem;color:#51606f}
   .topic{display:block;width:100%;text-align:left;border:0;background:none;padding:.4rem .6rem;border-radius:.4rem;color:var(--ink);font-size:.93rem}
   .topic:hover{background:var(--soft)}
@@ -44,8 +44,18 @@ window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault()
   .dcap{font-size:.82rem;color:#51606f;margin:.6rem 0 0;text-align:center}
   .apps li{margin-bottom:.25rem}
   .info-img{width:100%;max-width:900px;display:block;margin:0 auto;border-radius:.5rem;cursor:zoom-in}
+  .vbadge{background:rgba(255,255,255,.14);border-radius:1rem;padding:.15rem .7rem;font-size:.8rem;color:#fff;white-space:nowrap}
+  .vbadge b{color:#ffd166}
+  .navrow{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:1rem}
+  #pos{font-size:.85rem;color:#51606f}
+  .site-footer{background:#1c2733;color:#cfd8e3;margin-top:1.5rem;padding:1.1rem 1rem}
+  .site-footer a{color:#9cc0ff;text-decoration:none}.site-footer a:hover{text-decoration:underline}
+  .site-footer .fgrid{display:flex;flex-wrap:wrap;gap:.75rem 2rem;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto}
+  .site-footer .vbadge{background:#2b3a4d}
+  .topic{transition:background .15s}
+  .panel{border:1px solid #e3e9f2}
   :focus-visible{outline:3px solid #ffb703;outline-offset:2px}
-  @media(min-width:768px){#sidebar{height:100vh}}
+  @media(min-width:768px){#sidebar{position:sticky;top:var(--hh,52px);height:calc(100vh - var(--hh,52px));max-height:none;align-self:flex-start}}
 </style>
 </head>
 <body>
@@ -54,10 +64,10 @@ window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault()
     <button class="btn btn-sm btn-outline-light d-md-none" data-bs-toggle="collapse" data-bs-target="#sidebar" aria-label="Toggle topics">Topics</button>
     <span class="brand fs-5">Machine Learning Theory ACE</span>
     <div class="ms-auto d-flex flex-wrap gap-2 align-items-center justify-content-end" id="appBtns">
+      <span class="vbadge d-none d-sm-inline">Visitors <b class="vcount">&hellip;</b></span>
       <button id="installBtn" class="btn btn-sm btn-warning d-none">Install App</button>
       <a id="apkBtn" class="btn btn-sm btn-success d-none" download>Download APK</a>
-      <button id="howBtn" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#howModal">How to install</button>
-      <a class="d-none d-md-inline" href="https://codingacharya.blogspot.com/" target="_blank" rel="noopener">Coding Acharya</a>
+      <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#fbModal">Feedback</button>
     </div>
   </div>
 </header>
@@ -70,12 +80,36 @@ window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault()
     </nav>
     <main class="col-md-9 col-xl-10 p-3 p-lg-4">
       <div id="content"></div>
-      <div class="d-flex justify-content-between mt-3">
-        <button id="prev" class="btn btn-outline-primary btn-sm">Previous</button>
-        <button id="next" class="btn btn-primary btn-sm">Next</button>
+      <div class="navrow">
+        <button id="prev" class="btn btn-outline-primary btn-sm">&larr; Previous</button>
+        <span id="pos"></span>
+        <button id="next" class="btn btn-primary btn-sm">Next &rarr;</button>
       </div>
     </main>
   </div>
+</div>
+
+<footer class="site-footer">
+  <div class="fgrid">
+    <span class="vbadge">Visitors <b class="vcount">&hellip;</b></span>
+    <span>Feedback or suggestions? <a href="#" data-bs-toggle="modal" data-bs-target="#fbModal">Send feedback</a> or email
+      <a class="fb-email" href="#"></a></span>
+    <span><a href="#" data-bs-toggle="modal" data-bs-target="#howModal">How to install</a> &middot; &copy; <span id="yr"></span> Coding Acharya</span>
+  </div>
+</footer>
+
+<div class="modal fade" id="fbModal" tabindex="-1" aria-label="Send feedback">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header py-2"><b>Send feedback</b><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body">
+      <div class="mb-2"><label class="form-label small mb-1" for="fbName">Your name (optional)</label><input id="fbName" class="form-control form-control-sm"></div>
+      <div class="mb-2"><label class="form-label small mb-1" for="fbType">Type</label>
+        <select id="fbType" class="form-select form-select-sm"><option>Suggestion</option><option>Report a mistake</option><option>Request a topic</option><option>Appreciation</option><option>Other</option></select></div>
+      <div class="mb-2"><label class="form-label small mb-1" for="fbMsg">Message</label><textarea id="fbMsg" rows="4" class="form-control form-control-sm" placeholder="Write your feedback here"></textarea></div>
+      <p class="small text-muted mb-0">This opens your email app with the message ready to send to <a class="fb-email" href="#"></a>.</p>
+    </div>
+    <div class="modal-footer py-2"><button id="fbSend" class="btn btn-primary btn-sm">Send by email</button></div>
+  </div></div>
 </div>
 
 <script src="libs/jquery.min.js"></script>
@@ -1084,13 +1118,14 @@ print("Estimated position/velocity:", x.ravel())` }
   var current = 0;
 
   function buildMenu(filter) {
-    var html = "", lastUnit = "";
+    var html = "", lastUnit = "", sbEl = document.getElementById("sidebar"), keep = sbEl ? sbEl.scrollTop : 0;
     $.each(T, function (i, t) {
       if (filter && t.title.toLowerCase().indexOf(filter) === -1) return;
       if (t.unit !== lastUnit) { html += '<div class="unit">' + t.unit + '</div>'; lastUnit = t.unit; }
       html += '<button class="topic' + (i === current ? ' active' : '') + '" data-i="' + i + '">' + t.title + '</button>';
     });
     $("#menu").html(html || '<p class="small text-muted mt-3">No topic found.</p>');
+    if (sbEl) sbEl.scrollTop = keep;   // keep scroll position (no jump back to the top)
   }
 
   function show(i) {
@@ -1127,7 +1162,10 @@ print("Estimated position/velocity:", x.ravel())` }
     );
     $("#content pre code").text(t.code);
     hljs.highlightElement($("#content pre code")[0]);
-    buildMenu($("#search").val().toLowerCase());
+    if (!$("#menu .topic").length) buildMenu($("#search").val().toLowerCase());
+    else $("#menu .topic").removeClass("active").filter('[data-i="' + i + '"]').addClass("active");
+    revealActive();
+    $("#pos").text("Topic " + (i + 1) + " of " + T.length);
     $("#prev").prop("disabled", i === 0);
     $("#next").prop("disabled", i === T.length - 1);
     location.hash = "t" + i;
@@ -1135,7 +1173,29 @@ print("Estimated position/velocity:", x.ravel())` }
   }
 
   $("#content").on("click", ".info-img", function () { $("#bigImg").attr("src", this.src).attr("alt", this.alt); });
-  $("#menu").on("click", ".topic", function () { show($(this).data("i")); });
+  // keep the selected topic visible inside the sidebar list (no re-render, no jump)
+  function revealActive() {
+    var sb = document.getElementById("sidebar"), a = $("#menu .topic.active")[0];
+    if (!sb || !a || sb.scrollHeight <= sb.clientHeight) return;
+    if (a.offsetTop < sb.scrollTop || a.offsetTop + a.offsetHeight > sb.scrollTop + sb.clientHeight)
+      sb.scrollTop = Math.max(0, a.offsetTop - sb.clientHeight / 2);
+  }
+  function scrollToContent() {
+    var y = $("#content").offset().top - $(".topbar").outerHeight() - 8;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }
+  // phones: close the topic list after choosing and go straight to the content
+  function closeMobileMenu() {
+    if (window.innerWidth >= 768) return;
+    var el = document.getElementById("sidebar");
+    if (!el.classList.contains("show")) { scrollToContent(); return; }
+    el.addEventListener("hidden.bs.collapse", scrollToContent, { once: true });
+    bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }).hide();
+  }
+  function setHeaderHeight() { document.documentElement.style.setProperty("--hh", $(".topbar").outerHeight() + "px"); }
+  setHeaderHeight(); $(window).on("resize", setHeaderHeight);
+
+  $("#menu").on("click", ".topic", function () { show($(this).data("i")); closeMobileMenu(); });
   $("#search").on("input", function () { buildMenu($(this).val().toLowerCase()); });
   $("#prev").on("click", function () { if (current > 0) show(current - 1); });
   $("#next").on("click", function () { if (current < T.length - 1) show(current + 1); });
@@ -1188,8 +1248,37 @@ $(function () {
   });
   window.addEventListener("appinstalled", function () { $("#installBtn, #howBtn").addClass("d-none"); });
   var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-  if (standalone) $("#appBtns .btn").addClass("d-none");
+  if (standalone) $("#installBtn, #apkBtn").addClass("d-none");
   if (APK_URL && !standalone) $("#apkBtn").attr("href", APK_URL).removeClass("d-none");
+});
+</script>
+<script>
+/* ===== SETTINGS: change these two values ===== */
+var FEEDBACK_EMAIL = "your-email@example.com";   // <-- put your real email here
+var COUNTER_NS = "thirupati-ml-notes", COUNTER_KEY = "visitors";  // visitor counter name (keep unique)
+/* ============================================ */
+$(function () {
+  $(".fb-email").text(FEEDBACK_EMAIL).attr("href", "mailto:" + FEEDBACK_EMAIL);
+  $("#yr").text(new Date().getFullYear());
+
+  $("#fbSend").on("click", function () {
+    var name = $("#fbName").val().trim(), type = $("#fbType").val(), msg = $("#fbMsg").val().trim();
+    var topic = ($("#content h2").first().text() || "").trim();
+    var body = (msg || "(write your feedback here)") + "\n\n--\n" + (name ? "Name: " + name + "\n" : "") + (topic ? "Topic open: " + topic + "\n" : "") + "Page: " + location.href;
+    window.location.href = "mailto:" + FEEDBACK_EMAIL + "?subject=" + encodeURIComponent("ML Notes feedback: " + type) + "&body=" + encodeURIComponent(body);
+  });
+
+  // Visitor counter: counts each browser once (free Abacus counter service; hidden if offline/unavailable)
+  var seen = false; try { seen = localStorage.getItem("ml_counted") === "1"; } catch (e) {}
+  fetch("https://abacus.jasoncameron.dev/" + (seen ? "get" : "hit") + "/" + COUNTER_NS + "/" + COUNTER_KEY)
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+    .then(function (d) {
+      if (d && typeof d.value === "number") {
+        $(".vcount").text(d.value.toLocaleString("en-IN"));
+        try { localStorage.setItem("ml_counted", "1"); } catch (e) {}
+      } else { $(".vbadge").addClass("d-none"); }
+    })
+    .catch(function () { $(".vbadge").addClass("d-none"); });
 });
 </script>
 </body>
