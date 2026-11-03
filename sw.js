@@ -1,6 +1,6 @@
 // Offline cache: bump CACHE when you change any file
-const CACHE = "ml-notes-v1";
-const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png",
+const CACHE = "ml-notes-v2";
+const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png",
   "libs/bootstrap.min.css", "libs/bootstrap.bundle.min.js", "libs/jquery.min.js",
   "libs/highlight.min.js", "libs/atom-one-dark.min.css"];
 

@@ -7,6 +7,11 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<script>
+/* Install support: catch Chrome's install prompt as early as possible */
+window.deferredInstall = null;
+window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); window.deferredInstall = e; if (window.jQuery) jQuery("#installBtn").removeClass("d-none"); });
+</script>
 <title>ML Theory ACE – Theory + Code</title>
 <link href="libs/bootstrap.min.css" rel="stylesheet">
 <link href="libs/atom-one-dark.min.css" rel="stylesheet">
@@ -48,7 +53,12 @@
   <div class="container-fluid d-flex align-items-center gap-3">
     <button class="btn btn-sm btn-outline-light d-md-none" data-bs-toggle="collapse" data-bs-target="#sidebar" aria-label="Toggle topics">Topics</button>
     <span class="brand fs-5">Machine Learning Theory ACE</span>
-    <a class="ms-auto" href="https://codingacharya.blogspot.com/" target="_blank" rel="noopener">Coding Acharya</a>
+    <div class="ms-auto d-flex flex-wrap gap-2 align-items-center justify-content-end" id="appBtns">
+      <button id="installBtn" class="btn btn-sm btn-warning d-none">Install App</button>
+      <a id="apkBtn" class="btn btn-sm btn-success d-none" download>Download APK</a>
+      <button id="howBtn" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#howModal">How to install</button>
+      <a class="d-none d-md-inline" href="https://codingacharya.blogspot.com/" target="_blank" rel="noopener">Coding Acharya</a>
+    </div>
   </div>
 </header>
 
@@ -1151,6 +1161,36 @@ print("Estimated position/velocity:", x.ravel())` }
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
+</script>
+<div class="modal fade" id="howModal" tabindex="-1" aria-label="How to install">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header py-2"><b>Install this app</b><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body">
+      <p class="mb-1"><b>Android (Chrome)</b></p>
+      <ol><li>Tap the <b>&#8942;</b> menu (top right)</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b></li></ol>
+      <p class="mb-1"><b>iPhone (Safari)</b></p>
+      <ol><li>Tap the <b>Share</b> button</li><li>Tap <b>Add to Home Screen</b></li></ol>
+      <p class="mb-1"><b>Laptop (Chrome / Edge)</b></p>
+      <ol><li>Click the install icon at the right end of the address bar</li></ol>
+      <p class="small text-muted mb-0">Open the link in Chrome or Safari. Links opened inside WhatsApp, Instagram or Telegram cannot be installed.</p>
+    </div>
+  </div></div>
+</div>
+<script>
+/* Set APK_URL to your APK file name (e.g. "ml-notes.apk") to show a Download APK button */
+var APK_URL = "";
+$(function () {
+  if (window.deferredInstall) $("#installBtn").removeClass("d-none");
+  $("#installBtn").on("click", function () {
+    var p = window.deferredInstall; if (!p) return;
+    p.prompt();
+    p.userChoice.then(function () { window.deferredInstall = null; $("#installBtn").addClass("d-none"); });
+  });
+  window.addEventListener("appinstalled", function () { $("#installBtn, #howBtn").addClass("d-none"); });
+  var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (standalone) $("#appBtns .btn").addClass("d-none");
+  if (APK_URL && !standalone) $("#apkBtn").attr("href", APK_URL).removeClass("d-none");
+});
 </script>
 </body>
 </html>
