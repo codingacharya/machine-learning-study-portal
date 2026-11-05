@@ -1,4 +1,4 @@
-const CACHE = "ml-theory-ace-v1";
+const CACHE = "ml-theory-ace-v2";
 const CORE = ["./", "./index.html", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png"];
 
@@ -19,7 +19,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || !req.url.startsWith("http")) return;
   const url = new URL(req.url);
-  if (url.hostname.includes("counter") || url.pathname.includes("/api/")) return;
+  if (url.origin !== location.origin && /counter|abacus/.test(url.hostname)) return;
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(req, { ignoreSearch: true });

@@ -2173,7 +2173,7 @@ print("momentum ->", round(gd(0.05, momentum=0.9), 3))
 </div>
 <script>
 /* ===== SETTINGS: change these two values ===== */
-var FEEDBACK_EMAIL = "kandadithirupathi4@gmail.com";   // Replace with your email address before publishing
+var FEEDBACK_EMAIL = "kandadithirupathi4@gmail.com";   // Feedback goes to this address
 
 /* ============================================ */
 $(function () {
@@ -2184,45 +2184,54 @@ $(function () {
     var name = $("#fbName").val().trim(), type = $("#fbType").val(), msg = $("#fbMsg").val().trim();
     var topic = ($("#content h2").first().text() || "").trim();
     var body = (msg || "(write your feedback here)") + "\n\n--\n" + (name ? "Name: " + name + "\n" : "") + (topic ? "Topic open: " + topic + "\n" : "") + "Page: " + location.href;
-    if (FEEDBACK_EMAIL === "kandadithirupathi4@gmail.com") { alert("Please set FEEDBACK_EMAIL in the final script to your email address before using feedback."); return; }
     window.location.href = "mailto:" + FEEDBACK_EMAIL + "?subject=" + encodeURIComponent("ML Notes feedback: " + type) + "&body=" + encodeURIComponent(body);
   });
 
 
   // ===== Visitor counter =====
-  // Counts one page view per browser tab session. The count is shared online
-  // through CounterAPI; it is not a locally fabricated number.
+  // Counts one visit per browser tab session using a shared online counter.
+  // Primary: CounterAPI v1. Fallback: Abacus. Shows "Unavailable" only if both fail.
   (function trackVisitors() {
     var display = document.getElementById("visitorCount");
     if (!display) return;
-    var namespace = (location.hostname || "ml-theory-ace-preview").toLowerCase()
-      .replace(/[^a-z0-9.-]/g, "-");
-    var sessionKey = "mlTheoryAceVisitCounted:" + namespace;
-    var shouldIncrement = false;
+    var ns = "ml-theory-ace-thirupati", key = "visitors";
+    var sessionKey = "mlTheoryAceVisitCounted:" + ns;
+    var shouldIncrement = true;
     try {
       shouldIncrement = !sessionStorage.getItem(sessionKey);
       if (shouldIncrement) sessionStorage.setItem(sessionKey, "1");
-    } catch (e) {
-      // If session storage is blocked, count this page load instead.
-      shouldIncrement = true;
+    } catch (e) {}
+
+    function getJSON(url) {
+      return fetch(url, { method: "GET", mode: "cors", cache: "no-store" })
+        .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+    }
+    function pick(d) {
+      var v = d && (d.count !== undefined ? d.count : d.value !== undefined ? d.value :
+              (d.data && d.data.up_count !== undefined ? d.data.up_count : undefined));
+      v = Number(v);
+      if (!isFinite(v)) throw new Error("Bad counter response");
+      return v;
+    }
+    function viaCounterApi() {
+      var base = "https://api.counterapi.dev/v1/" + ns + "/" + key;
+      var first = shouldIncrement ? base + "/up" : base;
+      return getJSON(first).then(pick).catch(function () {
+        return getJSON(base + "/up").then(pick); // counter may not exist yet
+      });
+    }
+    function viaAbacus() {
+      var base = "https://abacus.jasoncameron.dev/";
+      var url = base + (shouldIncrement ? "hit/" : "get/") + ns + "/" + key;
+      return getJSON(url).then(pick).catch(function () {
+        return getJSON(base + "hit/" + ns + "/" + key).then(pick);
+      });
     }
 
-    var endpoint = "https://counterapi.com/api/" +
-      encodeURIComponent(namespace) + "/view/visitors" +
-      (shouldIncrement ? "" : "?readOnly=true");
-
-    fetch(endpoint, { method: "GET", mode: "cors", cache: "no-store" })
-      .then(function (response) {
-        if (!response.ok) throw new Error("Counter service unavailable");
-        return response.json();
-      })
-      .then(function (data) {
-        if (typeof data.value === "number") {
-          display.textContent = data.value.toLocaleString();
-          display.title = "Page views counted by the online visitor counter";
-        } else {
-          throw new Error("Unexpected counter response");
-        }
+    viaCounterApi().catch(viaAbacus)
+      .then(function (n) {
+        display.textContent = n.toLocaleString();
+        display.title = "Visits counted by the online visitor counter";
       })
       .catch(function () {
         display.textContent = "Unavailable";
