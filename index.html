@@ -8,6 +8,9 @@
 <meta name="theme-color" content="#1c2733">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ML Theory ACE">
 <title>ML Theory ACE – Theory + Code</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" rel="stylesheet">
@@ -2227,60 +2230,57 @@ $(function () {
       });
   })();
 
-  // ===== Mobile app download / install =====
-  (function setupMobileAppDownload() {
-    var installButton = document.getElementById("installAppBtn");
-    if (!installButton) return;
-
+  // ===== Mobile app install (PWA) =====
+  (function setupAppInstall() {
+    var btn = document.getElementById("installAppBtn");
+    var deferredPrompt = null;
     var ua = navigator.userAgent || "";
-    var isAndroid = /Android/i.test(ua);
     var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var isMobile = isIOS || /Android/i.test(ua);
+    var isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
 
-    // Desktop users do not need an install/download control.
-    if (!isAndroid && !isIOS) {
-      installButton.hidden = true;
-      return;
-    }
-
-    if (isAndroid) {
-      installButton.textContent = "⬇ Download Android App";
-      installButton.addEventListener("click", async function () {
-        var apkUrl = new URL("./downloads/ML-Theory-ACE.apk", window.location.href).href;
-        installButton.disabled = true;
-        installButton.textContent = "Checking download…";
-        try {
-          var response = await fetch(apkUrl, { method: "HEAD", cache: "no-store" });
-          if (!response.ok) throw new Error("APK not published");
-          var link = document.createElement("a");
-          link.href = apkUrl;
-          link.download = "ML-Theory-ACE.apk";
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          installButton.textContent = "Download started";
-        } catch (error) {
-          window.alert("The Android app package is not uploaded yet. Please upload ML-Theory-ACE.apk to the website's downloads folder and try again.");
-          installButton.textContent = "⬇ Download Android App";
-        } finally {
-          installButton.disabled = false;
-        }
-      });
-    } else {
-      installButton.textContent = "＋ Add to Home Screen";
-      installButton.addEventListener("click", function () {
-        window.alert("On iPhone or iPad, open this page in Safari, tap Share, then choose Add to Home Screen.");
-      });
-    }
-
-    if ("serviceWorker" in navigator &&
-        (window.isSecureContext || location.hostname === "localhost")) {
+    // Register the service worker (needed for Chrome to offer install + offline use)
+    if ("serviceWorker" in navigator && (window.isSecureContext || location.hostname === "localhost")) {
       window.addEventListener("load", function () {
-        navigator.serviceWorker.register("./sw.js").catch(function (error) {
-          console.warn("App offline support could not be enabled:", error);
+        navigator.serviceWorker.register("./sw.js").catch(function (e) {
+          console.warn("Service worker failed:", e);
         });
       });
     }
+
+    if (!btn) return;
+    // Hide when already installed/running as an app, or on desktop (until the browser offers install)
+    if (isStandalone) { btn.hidden = true; return; }
+    if (!isMobile) btn.hidden = true;
+    btn.innerHTML = isIOS ? "＋ Add to Home Screen" : "⬇ Install App";
+
+    window.addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      btn.hidden = false;
+      btn.innerHTML = "⬇ Install App";
+    });
+
+    window.addEventListener("appinstalled", function () {
+      deferredPrompt = null;
+      btn.hidden = true;
+    });
+
+    btn.addEventListener("click", async function () {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        try { await deferredPrompt.userChoice; } catch (e) {}
+        deferredPrompt = null;
+        return;
+      }
+      if (isIOS) {
+        window.alert("On iPhone/iPad: open this page in Safari, tap the Share button, then choose \u201cAdd to Home Screen\u201d.");
+      } else {
+        window.alert("To install: tap the browser menu (\u22EE) in Chrome, then choose \u201cInstall app\u201d or \u201cAdd to Home screen\u201d.");
+      }
+    });
   })();
 
 
