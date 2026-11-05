@@ -6,6 +6,8 @@
 <meta name="color-scheme" content="light">
 <meta name="description" content="A structured machine learning theory and Python code reference with searchable topics, diagrams and examples.">
 <meta name="theme-color" content="#1c2733">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <title>ML Theory ACE – Theory + Code</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" rel="stylesheet">
@@ -70,6 +72,12 @@ body{min-height:100vh}
 .params td:last-child{min-width:12rem}
 @media(max-width:767.98px){#sidebar{max-height:48vh;border-bottom:1px solid #dee2e6}main{padding:.85rem!important}.panel{padding:1rem!important}.navrow{position:sticky;bottom:0;background:rgba(242,245,249,.96);padding:.65rem 0;z-index:5;backdrop-filter:blur(8px)}}
 
+
+#installAppBtn{white-space:nowrap}
+.site-footer .vbadge{display:inline-flex;align-items:center;gap:.35rem}
+#visitorCount{min-width:1.5ch;text-align:right}
+@media(max-width:575.98px){#appBtns{gap:.35rem!important}#installAppBtn{font-size:.75rem}}
+
 </style>
 </head>
 <body>
@@ -78,6 +86,7 @@ body{min-height:100vh}
     <button class="btn btn-sm btn-outline-light d-md-none" data-bs-toggle="collapse" data-bs-target="#sidebar" aria-label="Toggle topics">Topics</button>
     <span class="brand fs-5">Machine Learning Theory ACE</span>
     <div class="ms-auto d-flex flex-wrap gap-2 align-items-center justify-content-end" id="appBtns">
+      <button id="installAppBtn" class="btn btn-sm btn-warning fw-semibold" type="button"><span aria-hidden="true">⬇</span> Download App</button>
       <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#fbModal">Feedback</button>
     </div>
   </div>
@@ -104,6 +113,7 @@ body{min-height:100vh}
   <div class="fgrid">
     <span>Feedback or suggestions? <a href="#" data-bs-toggle="modal" data-bs-target="#fbModal">Send feedback</a> or email
       <a class="fb-email" href="#"></a></span>
+    <span class="vbadge" aria-live="polite">👁 Visitors: <b id="visitorCount">Loading…</b></span>
     <span>&copy; <span id="yr"></span> Coding Acharya</span>
   </div>
 </footer>
@@ -2174,6 +2184,104 @@ $(function () {
     if (FEEDBACK_EMAIL === "kandadithirupathi4@gmail.com") { alert("Please set FEEDBACK_EMAIL in the final script to your email address before using feedback."); return; }
     window.location.href = "mailto:" + FEEDBACK_EMAIL + "?subject=" + encodeURIComponent("ML Notes feedback: " + type) + "&body=" + encodeURIComponent(body);
   });
+
+
+  // ===== Visitor counter =====
+  // Counts one page view per browser tab session. The count is shared online
+  // through CounterAPI; it is not a locally fabricated number.
+  (function trackVisitors() {
+    var display = document.getElementById("visitorCount");
+    if (!display) return;
+    var namespace = (location.hostname || "ml-theory-ace-preview").toLowerCase()
+      .replace(/[^a-z0-9.-]/g, "-");
+    var sessionKey = "mlTheoryAceVisitCounted:" + namespace;
+    var shouldIncrement = false;
+    try {
+      shouldIncrement = !sessionStorage.getItem(sessionKey);
+      if (shouldIncrement) sessionStorage.setItem(sessionKey, "1");
+    } catch (e) {
+      // If session storage is blocked, count this page load instead.
+      shouldIncrement = true;
+    }
+
+    var endpoint = "https://counterapi.com/api/" +
+      encodeURIComponent(namespace) + "/view/visitors" +
+      (shouldIncrement ? "" : "?readOnly=true");
+
+    fetch(endpoint, { method: "GET", mode: "cors", cache: "no-store" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("Counter service unavailable");
+        return response.json();
+      })
+      .then(function (data) {
+        if (typeof data.value === "number") {
+          display.textContent = data.value.toLocaleString();
+          display.title = "Page views counted by the online visitor counter";
+        } else {
+          throw new Error("Unexpected counter response");
+        }
+      })
+      .catch(function () {
+        display.textContent = "Unavailable";
+        display.title = "Visitor count needs an internet connection and the counter service to be available.";
+      });
+  })();
+
+  // ===== Mobile app download / install =====
+  (function setupMobileAppDownload() {
+    var installButton = document.getElementById("installAppBtn");
+    if (!installButton) return;
+
+    var ua = navigator.userAgent || "";
+    var isAndroid = /Android/i.test(ua);
+    var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+    // Desktop users do not need an install/download control.
+    if (!isAndroid && !isIOS) {
+      installButton.hidden = true;
+      return;
+    }
+
+    if (isAndroid) {
+      installButton.textContent = "⬇ Download Android App";
+      installButton.addEventListener("click", async function () {
+        var apkUrl = new URL("./downloads/ML-Theory-ACE.apk", window.location.href).href;
+        installButton.disabled = true;
+        installButton.textContent = "Checking download…";
+        try {
+          var response = await fetch(apkUrl, { method: "HEAD", cache: "no-store" });
+          if (!response.ok) throw new Error("APK not published");
+          var link = document.createElement("a");
+          link.href = apkUrl;
+          link.download = "ML-Theory-ACE.apk";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          installButton.textContent = "Download started";
+        } catch (error) {
+          window.alert("The Android app package is not uploaded yet. Please upload ML-Theory-ACE.apk to the website's downloads folder and try again.");
+          installButton.textContent = "⬇ Download Android App";
+        } finally {
+          installButton.disabled = false;
+        }
+      });
+    } else {
+      installButton.textContent = "＋ Add to Home Screen";
+      installButton.addEventListener("click", function () {
+        window.alert("On iPhone or iPad, open this page in Safari, tap Share, then choose Add to Home Screen.");
+      });
+    }
+
+    if ("serviceWorker" in navigator &&
+        (window.isSecureContext || location.hostname === "localhost")) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("./sw.js").catch(function (error) {
+          console.warn("App offline support could not be enabled:", error);
+        });
+      });
+    }
+  })();
 
 
 });

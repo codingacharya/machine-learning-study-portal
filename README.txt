@@ -17,3 +17,6 @@ This package creates an installable PWA, not a native Android APK. A native APK 
 
 ## Visitor counter
 The footer uses CounterAPI's public page-view endpoint. It counts one visit per browser tab session and uses the deployed hostname as the counter namespace. The counter requires internet access. If the API is unavailable or blocked, the footer displays “Unavailable” instead of inventing a count.
+
+
+MOBILE DOWNLOAD BEHAVIOR: Android downloads downloads/ML-Theory-ACE.apk once you upload the compiled APK there. iPhone/iPad uses Safari Add to Home Screen. The Download App button is hidden on desktop. The APK is not included in this source ZIP.
