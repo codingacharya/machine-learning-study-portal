@@ -1,22 +1,23 @@
-# ML Theory ACE – Installable Web App
+ML THEORY ACE - mobile app package
+==================================
+Upload EVERYTHING in this folder to the ROOT of your Vercel (or Netlify) project:
 
-## Files
-- `index.html` – the complete ML Theory ACE website
-- `manifest.webmanifest` – app name, icon and install settings
-- `sw.js` – service worker for app-shell/offline caching
-- `icons/` – install icons
+  index.html              the app
+  manifest.webmanifest    app name + icons
+  sw.js                   offline support
+  vercel.json             correct headers for Vercel
+  icons/                  app icons
+  libs/                   Bootstrap, jQuery, highlight.js, KaTeX maths (so the app works offline)
 
-## Deploy and install
-1. Upload the complete contents of this folder to the same directory on an HTTPS web host (for example, your existing Vercel project).
-2. Make sure `index.html`, `manifest.webmanifest`, `sw.js`, and the `icons` folder are all deployed together.
-3. Open the HTTPS website in Chrome/Edge on Android or desktop.
-4. Tap **Download App** in the website. If the browser does not show an install prompt, use its menu and choose **Install app** or **Add to Home screen**.
-5. On iPhone, open the site in Safari → Share → Add to Home Screen.
+INSTALL ON A PHONE
+  Android (Chrome): open your site -> tap the yellow "Install App" button
+                    (or menu -> Install app / Add to Home screen).
+  iPhone (Safari):  open your site -> Share -> Add to Home Screen.
+  Do not open the link inside WhatsApp / Instagram / Telegram - open it in Chrome or Safari.
 
-This package creates an installable PWA, not a native Android APK. A native APK requires a separate Android wrapper/build and signing process.
+UPDATING LATER
+  Replace the files, and change  const VERSION = "v8"  in sw.js to "v8" (any new value),
+  so phones pick up the new version.
 
-## Visitor counter
-The footer uses CounterAPI's public page-view endpoint. It counts one visit per browser tab session and uses the deployed hostname as the counter namespace. The counter requires internet access. If the API is unavailable or blocked, the footer displays “Unavailable” instead of inventing a count.
-
-
-MOBILE DOWNLOAD BEHAVIOR: Android downloads downloads/ML-Theory-ACE.apk once you upload the compiled APK there. iPhone/iPad uses Safari Add to Home Screen. The Download App button is hidden on desktop. The APK is not included in this source ZIP.
+REAL APK (optional)
+  Go to pwabuilder.com, enter your site link, choose Android, download the package.
