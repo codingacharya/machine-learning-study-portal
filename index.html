@@ -65,6 +65,25 @@
   .calc-steps{padding-left:1.3rem}
   .calc-steps li{margin-bottom:.45rem;line-height:1.9;overflow-x:auto;overflow-y:hidden}
   .calc-res{background:#e7f6ec;border-left:4px solid #2a9d5c;border-radius:.4rem;padding:.55rem .8rem;margin-top:.6rem}
+  .stagebar{display:flex;gap:.4rem;overflow-x:auto;padding:.45rem .1rem;margin-bottom:.6rem;position:sticky;top:var(--hh,52px);z-index:5;background:var(--bg);-webkit-overflow-scrolling:touch}
+  .stbtn{white-space:nowrap;border:1px solid #c9d6ea;background:#fff;color:var(--ink);border-radius:2rem;padding:.3rem .85rem .3rem .4rem;font-size:.85rem;display:flex;align-items:center;gap:.4rem;cursor:pointer}
+  .stbtn .stn{width:1.45rem;height:1.45rem;border-radius:50%;background:var(--soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700}
+  .stbtn.cur{background:var(--accent);color:#fff;border-color:var(--accent)}.stbtn.cur .stn{background:#fff;color:var(--accent)}
+  .stbtn.seen:not(.cur) .stn{background:#2a9d5c;color:#fff}.stbtn.dim{opacity:.6}
+  .stpane{display:none}.stpane.on{display:block}
+  .vctl{display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;align-items:flex-end;margin-bottom:.5rem}
+  .vl{font-size:.82rem;display:flex;flex-direction:column;min-width:150px;flex:1 1 150px}.vl input{width:100%}
+  .vcv{width:100%;max-width:640px;height:auto;border:1px solid #e3e9f2;border-radius:.4rem;background:#fff;touch-action:manipulation;display:block}
+  .vout{font-size:.88rem;margin-top:.5rem;line-height:1.55}
+  .derive{padding-left:1.2rem}.derive li{margin-bottom:.9rem}.dtxt{font-weight:600;font-size:.92rem}
+  .algo{background:#0f1b2d;color:#e6edf7;border-radius:.5rem;padding:.7rem .9rem;font-size:.85rem;overflow-x:auto}
+  .algo .ln{display:inline-block;width:1.7rem;color:#7d8da8;user-select:none}.algo code{color:#e6edf7;background:none;white-space:pre-wrap;padding:0}
+  .algo-flow li{margin-bottom:.3rem}
+  .qtext{font-size:1.02rem;font-weight:600}.qopts{display:grid;gap:.45rem}.qopt{text-align:left;white-space:normal}
+  .quizend{text-align:center;padding:1rem 0}
+  .progbox{margin:.6rem 0 .2rem;padding:.5rem .6rem;background:var(--soft);border-radius:.5rem}
+  .topic.done::after{content:" \2713";color:#2a9d5c;font-weight:700}.topic.part::after{content:" \25CF";color:#e0a020;font-size:.7rem}
+  .topic.active.done::after,.topic.active.part::after{color:#fff}
   :focus-visible{outline:3px solid #ffb703;outline-offset:2px}
   @media(min-width:768px){#sidebar{position:sticky;top:var(--hh,52px);height:calc(100vh - var(--hh,52px));max-height:none;align-self:flex-start}}
 
@@ -109,6 +128,7 @@ body{min-height:100vh}
   <div class="row">
     <nav id="sidebar" class="col-md-3 col-xl-2 bg-white border-end collapse d-md-block" aria-label="Topics">
       <input id="search" type="search" class="form-control form-control-sm" placeholder="Search topics" aria-label="Search topics">
+      <div id="progBox" class="progbox"></div>
       <div id="menu"></div>
     </nav>
     <main class="col-md-9 col-xl-10 p-3 p-lg-4">
@@ -2110,6 +2130,341 @@ print("momentum ->", round(gd(0.05, momentum=0.9), 3))
            '<div class="calc-res"><b>Result.</b> ' + mathFmt(m.r) + '</div></div>';
   }
 
+  /* =====================================================================
+     LEARNING PLATFORM LAYER
+     Every topic follows one path:
+     Theory > Math > Derivation > Algorithm > Code > Visualize > Quiz > Apply
+     ===================================================================== */
+  var STAGES = [["theory", "Theory"], ["math", "Math"], ["derive", "Derivation"], ["algo", "Algorithm"],
+                ["code", "Code"], ["viz", "Visualize"], ["quiz", "Quiz"], ["apply", "Apply"]];
+  var PKEY = "mlace_progress_v1";
+  function loadProg() { try { return JSON.parse(localStorage.getItem(PKEY)) || {}; } catch (e) { return {}; } }
+  function saveProg() { try { localStorage.setItem(PKEY, JSON.stringify(PROG)); } catch (e) {} }
+  var PROG = loadProg();
+  function esc(s) { return $("<div>").text(s).html(); }
+  function hashStr(s) { var h = 7; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 233280; return h || 1; }
+  function shuffled(arr, seed) { var r = rnd(seed), a = arr.slice(), i, j, t; for (i = a.length - 1; i > 0; i--) { j = Math.floor(r() * (i + 1)); t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function stripTags(s) { return $("<div>").html(s).text(); }
+
+  /* ---------- derivations: [explanation, LaTeX] ---------- */
+  var DERIV = {
+    "Linear Regression": [["Cost to minimize (sum of squared errors)", "J(\\beta)=\\tfrac12\\lVert y-X\\beta\\rVert^2"], ["Differentiate with respect to \u03b2", "\\frac{\\partial J}{\\partial\\beta}=-X^{T}(y-X\\beta)"], ["Set the gradient to zero", "X^{T}X\\,\\beta=X^{T}y"], ["Solve (normal equation)", "\\hat\\beta=(X^{T}X)^{-1}X^{T}y"]],
+    "Gradient Descent & Optimizers": [["Linear approximation of the loss near w", "J(w+\\Delta)\\approx J(w)+\\nabla J(w)^{T}\\Delta"], ["Choose the step opposite to the gradient", "\\Delta=-\\alpha\\nabla J(w)\\;\\Rightarrow\\;J\\downarrow\\ \\text{by}\\ \\alpha\\lVert\\nabla J\\rVert^2"], ["Quadratic loss J = \u00bd\u03bbw\u00b2: the update becomes", "w_{t+1}=(1-\\alpha\\lambda)\\,w_t"], ["Converges only if |1 \u2212 \u03b1\u03bb| < 1", "0<\\alpha<\\frac{2}{\\lambda}"]],
+    "Logistic Regression": [["Model and likelihood", "p=\\sigma(z),\\quad L=\\prod_i p_i^{y_i}(1-p_i)^{1-y_i}"], ["Log-likelihood", "\\ell=\\sum_i\\big[y_i\\ln p_i+(1-y_i)\\ln(1-p_i)\\big]"], ["Useful identity", "\\sigma'(z)=\\sigma(z)\\,(1-\\sigma(z))"], ["Gradient (the \u03c3' terms cancel)", "\\frac{\\partial\\ell}{\\partial w}=\\sum_i (y_i-p_i)\\,x_i"], ["Gradient ascent update", "w\\leftarrow w+\\alpha\\sum_i (y_i-p_i)\\,x_i"]],
+    "Feedforward & Backpropagation": [["Chain rule for an output weight", "\\frac{\\partial E}{\\partial w_{jk}}=\\frac{\\partial E}{\\partial y_k}\\frac{\\partial y_k}{\\partial z_k}\\frac{\\partial z_k}{\\partial w_{jk}}"], ["Output delta (MSE, activation f)", "\\delta_k=(y_k-t_k)\\,f'(z_k)"], ["Hidden delta: error flows back through the weights", "\\delta_j=f'(z_j)\\sum_k w_{jk}\\,\\delta_k"], ["Every weight gradient is delta \u00d7 incoming activation", "\\frac{\\partial E}{\\partial w_{ij}}=\\delta_j\\,a_i"]],
+    "Perceptron & Linear Separability": [["Assume a unit vector w* separates the data with margin \u03b3, and \u2016x\u2016 \u2264 R", "y_i\\,(w^{*}\\!\\cdot x_i)\\ge\\gamma"], ["Each mistake increases alignment with w*", "w_{k+1}\\!\\cdot w^{*}\\ge w_k\\!\\cdot w^{*}+\\gamma\\ \\Rightarrow\\ w_k\\!\\cdot w^{*}\\ge k\\gamma"], ["...but the length grows slowly", "\\lVert w_{k+1}\\rVert^2\\le\\lVert w_k\\rVert^2+R^2\\ \\Rightarrow\\ \\lVert w_k\\rVert\\le R\\sqrt{k}"], ["Combine with Cauchy\u2013Schwarz: number of mistakes is finite", "k\\gamma\\le\\lVert w_k\\rVert\\le R\\sqrt k\\ \\Rightarrow\\ k\\le\\left(\\frac{R}{\\gamma}\\right)^{2}"]],
+    "Support Vector Machines": [["Distance from a point to the hyperplane", "d=\\frac{|w\\cdot x+b|}{\\lVert w\\rVert}"], ["Scale w, b so the closest points satisfy y(w\u00b7x+b) = 1; margin is twice that distance", "\\text{margin}=\\frac{2}{\\lVert w\\rVert}"], ["Maximize margin = minimize \u2016w\u2016\u00b2", "\\min_{w,b}\\tfrac12\\lVert w\\rVert^2\\ \\text{s.t.}\\ y_i(w\\cdot x_i+b)\\ge1"], ["Lagrangian gives the weights from support vectors", "w=\\sum_i\\alpha_i y_i x_i,\\qquad \\alpha_i>0\\ \\text{only for support vectors}"]],
+    "Decision Trees & Constructing Them": [["Information content of an event", "I(x)=-\\log_2 p(x)"], ["Entropy = expected information", "H=-\\sum_i p_i\\log_2 p_i\\quad(\\text{maximum at uniform } p_i)"], ["A split is good if children are purer than the parent", "IG=H(S)-\\sum_k\\frac{|S_k|}{|S|}H(S_k)"], ["Greedy rule: choose the split with the largest IG", "\\text{best}=\\arg\\max_{\\text{split}}IG"]],
+    "Unsupervised Learning: K-Means": [["Objective", "J=\\sum_k\\sum_{x\\in C_k}\\lVert x-\\mu_k\\rVert^2"], ["Fix \u03bc: each point must join the nearest centroid to minimize J", "c_i=\\arg\\min_k\\lVert x_i-\\mu_k\\rVert^2"], ["Fix assignments: set the derivative to zero", "\\frac{\\partial J}{\\partial\\mu_k}=-2\\sum_{x\\in C_k}(x-\\mu_k)=0"], ["Solution is the mean, so each step can only lower J", "\\mu_k=\\frac1{|C_k|}\\sum_{x\\in C_k}x"]],
+    "Principal Component Analysis (PCA)": [["Variance of data projected on a unit vector w", "\\mathrm{Var}(w^{T}x)=w^{T}Cw,\\quad \\lVert w\\rVert=1"], ["Maximize with a Lagrange multiplier", "\\mathcal L=w^{T}Cw-\\lambda(w^{T}w-1)"], ["Set the derivative to zero: an eigen-equation", "Cw=\\lambda w"], ["The variance equals the eigenvalue, so take the largest", "w^{T}Cw=\\lambda\\ \\Rightarrow\\ \\text{PC1}=\\text{eigenvector of }\\lambda_{max}"]],
+    "Naive Bayes": [["Bayes rule", "P(C\\mid x)=\\frac{P(x\\mid C)P(C)}{P(x)}"], ["Naive assumption: features are independent given the class", "P(x\\mid C)=\\prod_i P(x_i\\mid C)"], ["P(x) is the same for every class, so compare scores", "\\hat C=\\arg\\max_C\\; P(C)\\prod_i P(x_i\\mid C)"], ["Use logs to avoid underflow", "\\hat C=\\arg\\max_C\\Big[\\ln P(C)+\\sum_i\\ln P(x_i\\mid C)\\Big]"]],
+    "Gaussian Mixture Models": [["Log-likelihood of the data", "\\ell=\\sum_i\\ln\\sum_k\\pi_k N(x_i\\mid\\mu_k,\\sigma_k^2)"], ["E-step: probability that component k produced x_i", "\\gamma_{ik}=\\frac{\\pi_kN(x_i\\mid\\mu_k,\\sigma_k^2)}{\\sum_j\\pi_jN(x_i\\mid\\mu_j,\\sigma_j^2)}"], ["M-step: set the derivative w.r.t. \u03bc_k to zero", "\\mu_k=\\frac{\\sum_i\\gamma_{ik}x_i}{\\sum_i\\gamma_{ik}}"], ["Weights are the average responsibility", "\\pi_k=\\frac1n\\sum_i\\gamma_{ik}"]],
+    "Cross-Validation, Overfitting & Regularization": [["Expected squared error splits into three parts", "E[(y-\\hat f)^2]=\\big(E[\\hat f]-f\\big)^2+\\mathrm{Var}(\\hat f)+\\sigma^2"], ["Ridge adds a penalty to the cost", "J=\\lVert y-X\\beta\\rVert^2+\\lambda\\lVert\\beta\\rVert^2"], ["Differentiate and set to zero", "-2X^{T}(y-X\\beta)+2\\lambda\\beta=0"], ["Closed form: \u03bbI keeps the matrix invertible and shrinks \u03b2", "\\hat\\beta=(X^{T}X+\\lambda I)^{-1}X^{T}y"]],
+    "Ensemble Learning: Boosting": [["Exponential loss of the weighted vote for one round", "Z=\\varepsilon\\,e^{\\alpha}+(1-\\varepsilon)\\,e^{-\\alpha}"], ["Minimize over \u03b1", "\\frac{dZ}{d\\alpha}=\\varepsilon e^{\\alpha}-(1-\\varepsilon)e^{-\\alpha}=0"], ["Solve", "e^{2\\alpha}=\\frac{1-\\varepsilon}{\\varepsilon}\\ \\Rightarrow\\ \\alpha=\\tfrac12\\ln\\frac{1-\\varepsilon}{\\varepsilon}"]],
+    "Tracking Methods (Kalman Filter)": [["Blend prediction x\u207b and measurement z", "x=x^-+K(z-x^-)"], ["Posterior variance (1-D)", "P=(1-K)^2P^-+K^2R"], ["Minimize over K", "\\frac{dP}{dK}=-2(1-K)P^-+2KR=0"], ["Optimal gain: trust the less noisy source more", "K=\\frac{P^-}{P^-+R}"]],
+    "Reinforcement Learning: Getting Lost Example": [["Value of a state under the best action (Bellman)", "Q^*(s,a)=E\\big[r+\\gamma\\max_{a'}Q^*(s',a')\\big]"], ["Temporal-difference error", "\\delta=r+\\gamma\\max_{a'}Q(s',a')-Q(s,a)"], ["Move Q a small step toward the target", "Q(s,a)\\leftarrow Q(s,a)+\\alpha\\,\\delta"]],
+    "Transformers & Attention": [["Dot product of q and k (unit-variance components)", "\\mathrm{Var}(q\\cdot k)=d_k"], ["Large scores push softmax into saturation (tiny gradients), so rescale", "\\mathrm{Var}\\!\\left(\\frac{q\\cdot k}{\\sqrt{d_k}}\\right)=1"], ["Attention", "\\mathrm{Attention}(Q,K,V)=\\operatorname{softmax}\\!\\left(\\frac{QK^{T}}{\\sqrt{d_k}}\\right)V"]],
+    "Linear Discriminant Analysis (LDA)": [["Fisher criterion for projection w", "J(w)=\\frac{\\big(w^{T}(\\mu_1-\\mu_2)\\big)^2}{w^{T}S_Ww}"], ["Maximize: derivative equal to zero", "S_B w=\\lambda S_W w,\\quad S_B=(\\mu_1-\\mu_2)(\\mu_1-\\mu_2)^T"], ["S_B w always points along \u03bc\u2081 \u2212 \u03bc\u2082, so", "w\\propto S_W^{-1}(\\mu_1-\\mu_2)"]],
+    "Evaluation Metrics & Confusion Matrix": [["Precision and recall", "P=\\frac{TP}{TP+FP},\\qquad R=\\frac{TP}{TP+FN}"], ["F1 is their harmonic mean", "F_1=\\frac{2}{\\frac1P+\\frac1R}=\\frac{2PR}{P+R}"], ["Substitute: the form used in practice", "F_1=\\frac{2\\,TP}{2\\,TP+FP+FN}"]]
+  };
+
+  /* ---------- algorithms (pseudocode). Topics without an entry use their workflow diagram ---------- */
+  var ALGO = {
+    "Concept Learning and Find-S": ["h \u2190 most specific hypothesis (all \u2205)", "for each training example x:", "    if x is positive:", "        for each attribute: if h[a] differs from x[a], set h[a] \u2190 '?'", "    (negative examples are ignored)", "return h"],
+    "Version Space & Candidate Elimination": ["S \u2190 most specific boundary; G \u2190 most general boundary", "for each example d:", "    if d is positive: remove from G any h not covering d; generalize S minimally to cover d", "    if d is negative: remove from S any h covering d; specialize G minimally to exclude d", "return S and G (the version space lies between them)"],
+    "Perceptron & Linear Separability": ["w \u2190 0, b \u2190 0", "repeat until no mistakes (or max epochs):", "    for each (x, t): y \u2190 step(w\u00b7x + b)", "        if y \u2260 t: w \u2190 w + \u03b7(t \u2212 y)x ; b \u2190 b + \u03b7(t \u2212 y)", "return w, b"],
+    "Linear Regression": ["initialize \u03b2 randomly", "repeat for each epoch:", "    \u0177 \u2190 X\u03b2", "    gradient \u2190 \u2212(1/n) X\u1d40 (y \u2212 \u0177)", "    \u03b2 \u2190 \u03b2 \u2212 \u03b1 \u00b7 gradient", "(or solve the normal equation directly)"],
+    "Feedforward & Backpropagation": ["initialize weights with small random values", "for each epoch, for each batch:", "    forward: compute activations layer by layer, then the loss E", "    output delta: \u03b4 \u2190 (y \u2212 t) f'(z)", "    backward: \u03b4 for each earlier layer \u2190 f'(z) \u00b7 (W\u1d40 \u03b4_next)", "    update: W \u2190 W \u2212 \u03b7 \u03b4 a\u1d40"],
+    "Decision Trees & Constructing Them": ["function BUILD(S, features):", "    if S is pure or features is empty: return leaf(majority class)", "    choose feature f with the highest information gain", "    for each value v of f: child \u2190 BUILD(S where f = v, features \u2212 f)", "    return node(f, children)"],
+    "Ensemble Learning: Boosting": ["give every sample weight 1/n", "for t = 1..T:", "    train weak learner h_t on the weighted data", "    \u03b5 \u2190 weighted error; \u03b1_t \u2190 \u00bd ln((1 \u2212 \u03b5)/\u03b5)", "    increase weights of mistakes, decrease the rest, normalize", "final: H(x) = sign(\u03a3 \u03b1_t h_t(x))"],
+    "Ensemble Learning: Bagging": ["for b = 1..B:", "    draw a bootstrap sample (n rows with replacement)", "    train a model on it (for forests: random feature subset per split)", "predict: majority vote (classification) or average (regression)"],
+    "Nearest Neighbor Methods (KNN)": ["store all training data (no training step)", "to predict for query q:", "    compute distance from q to every training point", "    pick the k closest points", "    return the majority class (or the mean value)"],
+    "Unsupervised Learning: K-Means": ["choose K and pick K initial centroids", "repeat until assignments stop changing:", "    assign every point to its nearest centroid", "    move each centroid to the mean of its points", "return centroids and labels"],
+    "Principal Component Analysis (PCA)": ["center the data (subtract the mean of each feature)", "compute the covariance matrix C", "find eigenvalues and eigenvectors of C", "sort by eigenvalue, keep the top k eigenvectors W", "project: Z \u2190 X_centered \u00b7 W"],
+    "Gaussian Mixture Models": ["initialize \u03c0_k, \u03bc_k, \u03c3_k", "repeat until the log-likelihood stops improving:", "    E-step: \u03b3_ik \u2190 responsibility of component k for x_i", "    M-step: update \u03bc_k, \u03c3_k, \u03c0_k using the \u03b3 weights"],
+    "Genetic Algorithms & Operators": ["create a random population", "repeat for each generation:", "    evaluate fitness of every individual", "    select parents (tournament or roulette wheel)", "    crossover pairs, then mutate children with small probability", "    keep the best individual (elitism) and form the new population"],
+    "Reinforcement Learning: Getting Lost Example": ["initialize Q(s, a) = 0", "for each episode: s \u2190 start", "    while s is not terminal:", "        choose a (\u03b5-greedy), observe r and s'", "        Q(s,a) \u2190 Q(s,a) + \u03b1 [r + \u03b3 max Q(s',\u00b7) \u2212 Q(s,a)]", "        s \u2190 s'"],
+    "Sampling, Proposal Distribution & MCMC": ["start at x\u2080", "for t = 1..N:", "    propose x' ~ q(x' | x)", "    accept with probability min(1, p(x')q(x|x') / (p(x)q(x'|x)))", "    if accepted x \u2190 x'; record x", "discard burn-in samples, then use the rest"],
+    "Hidden Markov Models": ["forward: \u03b1\u2081(j) = \u03c0_j b_j(o\u2081)", "for t = 2..T: \u03b1_t(j) = [\u03a3_i \u03b1_{t-1}(i) a_ij] b_j(o_t)", "likelihood P(O) = \u03a3_j \u03b1_T(j)", "Viterbi: replace the sum by max and store back-pointers", "trace the pointers back for the best state sequence"],
+    "Tracking Methods (Kalman Filter)": ["predict: x\u207b \u2190 F x ; P\u207b \u2190 F P F\u1d40 + Q", "gain: K \u2190 P\u207b H\u1d40 (H P\u207b H\u1d40 + R)\u207b\u00b9", "update: x \u2190 x\u207b + K (z \u2212 H x\u207b) ; P \u2190 (I \u2212 K H) P\u207b", "repeat at every time step"],
+    "DBSCAN & Hierarchical Clustering": ["for each unvisited point p:", "    N \u2190 points within \u03b5 of p", "    if |N| < min_samples: mark p as noise", "    else: start a new cluster and keep adding the \u03b5-neighbours of every core point"],
+    "Association Rules (Apriori)": ["L1 \u2190 items with support \u2265 min_support", "for k = 2, 3, ...:", "    candidates \u2190 join frequent (k\u22121)-itemsets; prune those with an infrequent subset", "    keep candidates with support \u2265 min_support", "generate rules A \u2192 B with confidence \u2265 min_conf, then rank by lift"],
+    "Gradient Descent & Optimizers": ["initialize w", "repeat until converged:", "    g \u2190 \u2207J(w) on a batch", "    (momentum) v \u2190 \u03b2v + g ; w \u2190 w \u2212 \u03b1v", "    (Adam) update m, v with g and g\u00b2, then w \u2190 w \u2212 \u03b1 m\u0302 / (\u221av\u0302 + \u03b5)"]
+  };
+
+  /* ---------- hand-written quiz questions: [question, CORRECT, wrong, wrong, wrong, explanation] ---------- */
+  var QUIZ = {
+    "Types of Learning": [["Which type of learning uses rewards and penalties?", "Reinforcement learning", "Supervised learning", "Unsupervised learning", "Semi-supervised learning", "An agent learns a policy by trial and error from rewards."], ["Clustering customers with no labels is an example of:", "Unsupervised learning", "Supervised learning", "Reinforcement learning", "Transfer learning", "No target labels are given; the algorithm finds structure."]],
+    "Supervised Learning": [["Which output is a regression problem?", "Predicting a house price", "Spam or not spam", "Cat or dog", "Fraud or genuine", "Regression predicts a continuous number."], ["Why keep a separate test set?", "To measure performance on unseen data", "To train faster", "To add more features", "To remove outliers", "Testing on training data hides overfitting."]],
+    "Perceptron & Linear Separability": [["Which gate can a single perceptron NOT learn?", "XOR", "AND", "OR", "NOT", "XOR is not linearly separable."], ["The perceptron update happens only when:", "The prediction is wrong", "The prediction is correct", "Every epoch ends", "The learning rate is 1", "Updates are driven by mistakes."]],
+    "Linear Regression": [["Ordinary least squares minimizes:", "The sum of squared residuals", "The sum of absolute residuals", "The number of features", "The margin", "OLS minimizes squared errors."], ["An R\u00b2 close to 0 means:", "The model explains little variance", "A perfect fit", "Strong overfitting", "Negative slope", "R\u00b2 is the fraction of variance explained."]],
+    "Feedforward & Backpropagation": [["Backpropagation relies on:", "The chain rule", "The pigeonhole principle", "Bayes rule", "Random search", "Gradients are propagated backwards with the chain rule."], ["The weight update direction is:", "Opposite to the gradient", "Along the gradient", "Random", "Orthogonal to the gradient", "Moving against the gradient lowers the loss."]],
+    "Support Vector Machines": [["SVM chooses the hyperplane that:", "Maximizes the margin", "Minimizes the number of features", "Passes through the mean", "Has the smallest bias term", "Largest margin gives the best generalization."], ["A very large C in SVM tends to:", "Fit training data tightly (risk of overfitting)", "Ignore all errors", "Use fewer support vectors always", "Make the model linear", "Large C penalizes misclassification heavily."]],
+    "Decision Trees & Constructing Them": [["Information gain is highest when a split:", "Produces purer child nodes", "Creates more branches", "Uses the last feature", "Has equal class sizes", "Purer children mean larger entropy reduction."], ["A fully grown tree most likely:", "Overfits the training data", "Underfits", "Has high bias", "Cannot handle numbers", "Deep trees memorize noise."]],
+    "Ensemble Learning: Bagging": [["Bagging mainly reduces:", "Variance", "Bias", "Noise in the labels", "Training time", "Averaging many models smooths out variance."], ["About what share of rows appears in a bootstrap sample?", "63%", "50%", "80%", "100%", "1 \u2212 (1 \u2212 1/n)^n \u2248 0.632."]],
+    "Ensemble Learning: Boosting": [["In AdaBoost, misclassified samples get:", "Higher weights", "Lower weights", "Removed", "The same weight", "The next learner must focus on the hard cases."], ["Boosting mainly reduces:", "Bias", "Variance only", "Dataset size", "Feature count", "Sequential learners correct earlier errors."]],
+    "Nearest Neighbor Methods (KNN)": [["KNN needs feature scaling because:", "It uses distances", "It uses trees", "It uses probabilities", "It trains with gradients", "A large-range feature dominates the distance."], ["A very small k (like 1) usually causes:", "Overfitting", "Underfitting", "Faster training", "Linear boundaries", "Noise points control the prediction."]],
+    "Unsupervised Learning: K-Means": [["K-Means minimizes:", "Within-cluster sum of squares", "Between-cluster distance", "Number of clusters", "Cluster labels", "Inertia is the total squared distance to centroids."], ["Which helps choose K?", "Elbow method or silhouette score", "Accuracy", "ROC curve", "Learning rate", "These measure cluster quality for different K."]],
+    "Principal Component Analysis (PCA)": [["The first principal component is the direction of:", "Maximum variance", "Minimum variance", "Maximum class separation", "The mean", "PCA keeps the most variance."], ["Before PCA you should usually:", "Standardize the features", "Add random noise", "Delete all outliers only", "Use one-hot labels", "Features with large scale would dominate otherwise."]],
+    "Evaluation Metrics & Confusion Matrix": [["Recall measures:", "Of all real positives, how many were found", "Of predicted positives, how many are right", "Overall accuracy", "True negative rate", "Recall = TP / (TP + FN)."], ["Accuracy is misleading when:", "Classes are highly imbalanced", "Data is balanced", "Features are scaled", "k is small", "Predicting the majority class gives a high score."]],
+    "Cross-Validation, Overfitting & Regularization": [["High training accuracy but low test accuracy means:", "Overfitting", "Underfitting", "Good generalization", "Data leakage fixes it", "The model memorized training noise."], ["Lasso (L1) regularization can:", "Set some weights exactly to zero", "Only shrink weights", "Remove the bias", "Increase variance", "The L1 penalty gives sparse solutions."]],
+    "Logistic Regression": [["The sigmoid maps z to:", "A probability between 0 and 1", "Any real number", "A class label directly", "A distance", "\u03c3(z) = 1/(1 + e^\u2212z)."], ["Logistic regression is trained by minimizing:", "Log loss (cross-entropy)", "Hinge loss", "Gini impurity", "Inertia", "It maximizes the likelihood of the labels."]],
+    "Naive Bayes": [["'Naive' refers to assuming:", "Features are independent given the class", "All classes are equal", "The data is Gaussian only", "No missing values", "This lets the likelihood factorize."], ["Laplace smoothing avoids:", "Zero probabilities", "Overfitting to noise only", "Scaling problems", "Class imbalance", "Unseen words would otherwise zero the product."]],
+    "Gradient Descent & Optimizers": [["A learning rate that is too large can cause:", "Divergence or oscillation", "Slow but safe progress", "Exact convergence", "Lower memory use", "Updates overshoot the minimum."], ["Momentum helps by:", "Smoothing updates using past gradients", "Removing the gradient", "Adding noise to labels", "Increasing batch size", "It accumulates a velocity in consistent directions."]],
+    "Reinforcement Learning: Getting Lost Example": [["In Q-learning, \u03b3 (gamma) controls:", "How much future rewards matter", "The exploration rate", "The learning speed", "The number of states", "Gamma discounts future rewards."], ["\u03b5-greedy is used to:", "Balance exploration and exploitation", "Speed up GPUs", "Scale rewards", "Prune states", "With probability \u03b5 the agent tries a random action."]],
+    "Sampling, Proposal Distribution & MCMC": [["Burn-in samples are discarded because:", "The chain has not yet reached the target distribution", "They are always wrong", "They are duplicates", "They reduce variance", "Early samples depend on the starting point."], ["A proposal step that is too small gives:", "High acceptance but slow exploration", "Zero acceptance", "Exact samples", "Independent samples", "The chain moves in tiny steps (high autocorrelation)."]],
+    "Hidden Markov Models": [["In an HMM the states are:", "Hidden; only observations are seen", "Always observed", "Continuous only", "Independent of each other", "States emit observations probabilistically."], ["The Viterbi algorithm finds:", "The most likely hidden state sequence", "The total likelihood", "The best number of states", "The emission matrix", "It replaces the forward sum with a max."]],
+    "Data Preprocessing": [["Why fit a scaler on training data only?", "To avoid data leakage", "To save memory", "To remove outliers", "To increase features", "Test statistics must not influence training."], ["The IQR rule flags a value as an outlier when it lies:", "Beyond Q1 \u2212 1.5 IQR or Q3 + 1.5 IQR", "Above the mean", "Below the median", "At the mode", "It is a robust fence around the middle 50%."]],
+    "Handling Imbalanced Data": [["SMOTE should be applied to:", "The training set only", "The test set", "Both train and test", "Labels only", "Test data must stay untouched."], ["Which metric suits rare-event data?", "F1 or PR-AUC", "Plain accuracy", "R\u00b2", "MSE", "They focus on the minority class."]],
+    "CNN for Image Classification": [["Pooling layers mainly:", "Reduce spatial size and add some invariance", "Add new filters", "Compute the loss", "Normalize labels", "They downsample the feature maps."], ["Convolution layers need fewer parameters than dense layers because:", "Filters share weights across the image", "They ignore pixels", "They use no bias", "They are smaller images", "One small filter slides over all positions."]],
+    "Transformers & Attention": [["Attention scores are divided by \u221ad_k to:", "Keep softmax from saturating", "Speed up training", "Reduce vocabulary", "Add positions", "Large dot products make gradients vanish."], ["Self-attention lets each token:", "Look at every other token", "Only see the previous token", "Ignore context", "Use fixed windows", "Every position attends to all positions."]]
+  };
+  function autoQuiz(t) {
+    var out = [], r = rnd(hashStr(t.title)), others = T.filter(function (x) { return x.title !== t.title; });
+    if (t.params && t.params.length) {
+      var p = t.params[Math.floor(r() * t.params.length)], pool = [];
+      others.forEach(function (o) { (o.params || []).forEach(function (q) { if (q[1] !== p[1] && pool.indexOf(q[1]) < 0) pool.push(q[1]); }); });
+      var wr = shuffled(pool, hashStr(p[0])).slice(0, 3);
+      if (wr.length === 3) out.push({ q: "In the Python example, what does <code>" + esc(p[0]) + "</code> do?", c: esc(p[1]), w: wr.map(esc), e: "From the parameter table: " + esc(p[0]) + " \u2192 " + esc(p[1]) + "." });
+    }
+    var ex = EXTRA[t.title], apps = ex && ex.a ? ex.a.map(stripTags) : [];
+    if (apps.length) {
+      var ap = apps[Math.floor(r() * apps.length)], pool2 = [];
+      shuffled(others.filter(function (o) { return o.unit !== t.unit; }), hashStr(t.title + "a")).slice(0, 12).forEach(function (o) {
+        var oe = EXTRA[o.title]; if (oe && oe.a && oe.a.length && pool2.length < 3) pool2.push(stripTags(oe.a[0]));
+      });
+      if (pool2.length === 3) out.push({ q: "Which is a real-world application of <b>" + esc(t.title) + "</b>?", c: esc(ap), w: pool2.map(esc), e: "Listed under Real-world applications for this topic." });
+    }
+    return out;
+  }
+  function quizFor(t) {
+    var hand = (QUIZ[t.title] || []).map(function (a) { return { q: a[0], c: a[1], w: [a[2], a[3], a[4]], e: a[5] }; });
+    return hand.concat(autoQuiz(t)).map(function (x, k) {
+      var opts = shuffled([x.c].concat(x.w), hashStr(x.q) + k);
+      return { q: x.q, o: opts, a: opts.indexOf(x.c), e: x.e };
+    });
+  }
+
+  /* ---------- interactive visualizations (canvas, vanilla JS) ---------- */
+  var VIZ = {}, VIZMAP = {
+    "Gradient Descent & Optimizers": "gd", "Feedforward & Backpropagation": "gd", "Linear Regression": "gd",
+    "Logistic Regression": "sig", "The Brain and the Neuron": "sig", "Multilayer Perceptron (MLP)": "sig",
+    "Basic Statistics": "norm", "Gaussian Mixture Models": "norm",
+    "Unsupervised Learning: K-Means": "km", "Nearest Neighbor Methods (KNN)": "knn",
+    "Cross-Validation, Overfitting & Regularization": "poly", "Perspectives and Issues in ML": "poly", "Interpolation & Basis Functions": "poly",
+    "Evaluation Metrics & Confusion Matrix": "roc", "Handling Imbalanced Data": "roc", "Perceptron & Linear Separability": "perc"
+  };
+  var VNAME = { gd: "Gradient descent: change the learning rate", sig: "Sigmoid neuron: change weight and bias", norm: "Normal distribution: change mean and spread", km: "K-Means: step through the algorithm", knn: "KNN: tap the plot to place a query", poly: "Overfitting: change the polynomial degree", roc: "Threshold: watch precision and recall move", perc: "Perceptron: train step by step" };
+  function slider(k, label, min, max, step, val) { return '<label class="vl">' + label + ' <b data-o="' + k + '">' + val + '</b><input type="range" data-k="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '"></label>'; }
+  function vbox(el, ctl, h) {
+    el.innerHTML = '<div class="vctl">' + ctl + '</div><canvas class="vcv" height="' + (h || 250) + '"></canvas><div class="vout"></div>';
+    var cv = el.querySelector("canvas"); cv.width = Math.max(280, Math.min(el.clientWidth || 520, 640));
+    var g = cv.getContext("2d");
+    var v = function (k) { return +el.querySelector('[data-k="' + k + '"]').value; };
+    $(el).on("input", "input[type=range]", function () { $(el).find('[data-o="' + this.dataset.k + '"]').text(this.value); });
+    return { cv: cv, g: g, W: cv.width, H: cv.height, out: el.querySelector(".vout"), v: v, el: el };
+  }
+  function axes(b) { var g = b.g; g.clearRect(0, 0, b.W, b.H); g.strokeStyle = "#c9d3e3"; g.lineWidth = 1; g.beginPath(); g.moveTo(30, b.H - 25); g.lineTo(b.W - 8, b.H - 25); g.moveTo(30, 8); g.lineTo(30, b.H - 25); g.stroke(); }
+  function dot(g, x, y, c, r) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r || 4, 0, 6.2832); g.fill(); }
+  function curve(g, f, x0, x1, X, Y, c, w) { g.strokeStyle = c; g.lineWidth = w || 2; g.beginPath(); for (var i = 0; i <= 160; i++) { var x = x0 + (x1 - x0) * i / 160, p = [X(x), Y(f(x))]; i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); } g.stroke(); }
+
+  VIZ.gd = function (el) {
+    var b = vbox(el, slider("lr", "Learning rate \u03b1", 0.01, 1.2, 0.01, 0.3) + slider("w0", "Start w\u2080", -4, 10, 0.5, 0) +
+      '<button class="btn btn-sm btn-primary" data-a="step">Step</button> <button class="btn btn-sm btn-outline-primary" data-a="run">Run 20</button> <button class="btn btn-sm btn-outline-secondary" data-a="reset">Reset</button>');
+    var w, path, f = function (x) { return (x - 3) * (x - 3); }, X = function (x) { return 30 + (x + 5) / 16 * (b.W - 40); }, Y = function (y) { return b.H - 25 - Math.min(y, 70) / 70 * (b.H - 40); };
+    function draw() {
+      axes(b); curve(b.g, f, -5, 11, X, Y, "#2457c5", 2.5);
+      path.forEach(function (p, i) { var pw = Math.max(-5, Math.min(11, p)); dot(b.g, X(pw), Y(f(p)), i === path.length - 1 ? "#e07a1f" : "rgba(224,122,31,.45)", i === path.length - 1 ? 6 : 3.5); });
+      var l = f(w); b.out.innerHTML = "Step " + (path.length - 1) + ": w = <b>" + (Math.abs(w) > 1e4 ? "diverged" : w.toFixed(3)) + "</b>, loss = <b>" + (l > 1e6 ? "\u221e" : l.toFixed(3)) + "</b>. Minimum is at w = 3." + (b.v("lr") > 1 ? ' <span class="text-danger">\u03b1 &gt; 1 overshoots on this curve.</span>' : "");
+    }
+    function reset() { w = b.v("w0"); path = [w]; draw(); }
+    function step() { w = w - b.v("lr") * 2 * (w - 3); if (Math.abs(w) > 1e6) w = 1e6 * Math.sign(w); path.push(w); if (path.length > 60) path.shift(); draw(); }
+    $(el).on("click", "[data-a]", function () { var a = this.dataset.a; if (a === "reset") reset(); else if (a === "step") step(); else for (var i = 0; i < 20; i++) step(); });
+    $(el).on("input", "input[type=range]", reset); reset();
+  };
+  VIZ.sig = function (el) {
+    var b = vbox(el, slider("w", "Weight w", -4, 4, 0.1, 1) + slider("b", "Bias b", -6, 6, 0.1, 0) + slider("x", "Input x", -6, 6, 0.1, 1));
+    var X = function (x) { return 30 + (x + 6) / 12 * (b.W - 40); }, Y = function (y) { return b.H - 25 - y * (b.H - 45); }, s = function (z) { return 1 / (1 + Math.exp(-z)); };
+    function draw() {
+      var w = b.v("w"), bb = b.v("b"), x = b.v("x"); axes(b);
+      b.g.strokeStyle = "#e07a1f"; b.g.setLineDash([4, 4]); b.g.beginPath(); b.g.moveTo(30, Y(0.5)); b.g.lineTo(b.W - 8, Y(0.5)); b.g.stroke(); b.g.setLineDash([]);
+      curve(b.g, function (t) { return s(w * t + bb); }, -6, 6, X, Y, "#2457c5", 2.5);
+      var p = s(w * x + bb); dot(b.g, X(x), Y(p), "#e07a1f", 6);
+      b.out.innerHTML = "z = " + (w * x + bb).toFixed(2) + ", output a = \u03c3(z) = <b>" + p.toFixed(3) + "</b>" + (w !== 0 ? "; decision boundary at x = " + (-bb / w).toFixed(2) : "") + ". Larger |w| makes the curve steeper; b shifts it.";
+    }
+    $(el).on("input", "input[type=range]", draw); draw();
+  };
+  VIZ.norm = function (el) {
+    var b = vbox(el, slider("mu", "Mean \u03bc", -3, 3, 0.1, 0) + slider("sd", "Std dev \u03c3", 0.4, 3, 0.1, 1));
+    var X = function (x) { return 30 + (x + 8) / 16 * (b.W - 40); }, Y = function (y) { return b.H - 25 - y / 1.1 * (b.H - 45); };
+    function draw() {
+      var mu = b.v("mu"), sd = b.v("sd"), f = function (x) { return Math.exp(-0.5 * Math.pow((x - mu) / sd, 2)) / (sd * 2.5066); }; axes(b);
+      b.g.fillStyle = "rgba(36,87,197,.18)"; b.g.beginPath(); b.g.moveTo(X(mu - sd), Y(0));
+      for (var i = 0; i <= 60; i++) { var x = mu - sd + 2 * sd * i / 60; b.g.lineTo(X(x), Y(f(x))); } b.g.lineTo(X(mu + sd), Y(0)); b.g.fill();
+      curve(b.g, f, -8, 8, X, Y, "#2457c5", 2.5); b.g.strokeStyle = "#1c2733"; b.g.beginPath(); b.g.moveTo(X(mu), Y(0)); b.g.lineTo(X(mu), Y(f(mu))); b.g.stroke();
+      b.out.innerHTML = "About <b>68%</b> of values lie in [" + (mu - sd).toFixed(1) + ", " + (mu + sd).toFixed(1) + "]; 95% within \u00b12\u03c3; peak height = 1/(\u03c3\u221a2\u03c0) = " + f(mu).toFixed(3) + ".";
+    }
+    $(el).on("input", "input[type=range]", draw); draw();
+  };
+  VIZ.km = function (el) {
+    var b = vbox(el, slider("k", "Clusters K", 2, 6, 1, 3) + '<button class="btn btn-sm btn-primary" data-a="step">Step</button> <button class="btn btn-sm btn-outline-secondary" data-a="reset">Reset</button>');
+    var r = rnd(11), pts = [], C = [[0.25, 0.7], [0.75, 0.65], [0.5, 0.25]], i, j, cen, lab, it, seed = 3;
+    for (i = 0; i < 54; i++) { var c = C[i % 3]; pts.push([c[0] + (r() - .5) * .3, c[1] + (r() - .5) * .3]); }
+    var P = function (p) { return [30 + p[0] * (b.W - 45), b.H - 25 - p[1] * (b.H - 40)]; }, COL = ["#2457c5", "#e07a1f", "#2a9d5c", "#9b51e0", "#c0392b", "#16a2b8"];
+    function draw() {
+      axes(b); var J = 0;
+      pts.forEach(function (p, n) { var q = P(p); dot(b.g, q[0], q[1], lab ? COL[lab[n]] : "#8a97a6", 4); if (lab) J += Math.pow(p[0] - cen[lab[n]][0], 2) + Math.pow(p[1] - cen[lab[n]][1], 2); });
+      cen.forEach(function (c, k) { var q = P(c); b.g.fillStyle = "#1c2733"; b.g.fillRect(q[0] - 6, q[1] - 6, 12, 12); b.g.strokeStyle = COL[k]; b.g.lineWidth = 3; b.g.strokeRect(q[0] - 6, q[1] - 6, 12, 12); });
+      b.out.innerHTML = "Iteration <b>" + it + "</b>" + (lab ? ", inertia J = <b>" + J.toFixed(3) + "</b>" : ", initial centroids placed (squares)") + ". Press Step: assign points, then move centroids.";
+    }
+    function reset() { var k = b.v("k"); seed++; var rr = rnd(seed * 17); cen = []; for (j = 0; j < k; j++) cen.push(pts[Math.floor(rr() * pts.length)].slice()); lab = null; it = 0; draw(); }
+    function step() {
+      lab = pts.map(function (p) { var best = 0, bd = 1e9; cen.forEach(function (c, k) { var d = Math.pow(p[0] - c[0], 2) + Math.pow(p[1] - c[1], 2); if (d < bd) { bd = d; best = k; } }); return best; });
+      cen = cen.map(function (c, k) { var s = [0, 0, 0]; pts.forEach(function (p, n) { if (lab[n] === k) { s[0] += p[0]; s[1] += p[1]; s[2]++; } }); return s[2] ? [s[0] / s[2], s[1] / s[2]] : c; }); it++; draw();
+    }
+    $(el).on("click", "[data-a]", function () { this.dataset.a === "step" ? step() : reset(); }); $(el).on("input", "[data-k=k]", reset); reset();
+  };
+  VIZ.knn = function (el) {
+    var b = vbox(el, slider("k", "Neighbours k", 1, 15, 1, 5));
+    var r = rnd(5), pts = [], i, q = [0.5, 0.5];
+    for (i = 0; i < 40; i++) pts.push(i % 2 ? [0.62 + (r() - .5) * .5, 0.6 + (r() - .5) * .5, 1] : [0.38 + (r() - .5) * .5, 0.4 + (r() - .5) * .5, 0]);
+    var P = function (p) { return [30 + p[0] * (b.W - 45), b.H - 25 - p[1] * (b.H - 40)]; };
+    function draw() {
+      axes(b); var k = b.v("k"), qq = P(q), d = pts.map(function (p) { return [Math.hypot(p[0] - q[0], p[1] - q[1]), p[2], p]; }).sort(function (a, c) { return a[0] - c[0]; }), nn = d.slice(0, k), votes = [0, 0];
+      nn.forEach(function (n) { votes[n[1]]++; }); var R = nn[nn.length - 1][0] * (b.W - 45);
+      b.g.strokeStyle = "#2a9d5c"; b.g.setLineDash([5, 4]); b.g.beginPath(); b.g.arc(qq[0], qq[1], R, 0, 6.2832); b.g.stroke(); b.g.setLineDash([]);
+      pts.forEach(function (p) { var s = P(p); dot(b.g, s[0], s[1], p[2] ? "#e07a1f" : "#2457c5", 4); });
+      nn.forEach(function (n) { var s = P(n[2]); b.g.strokeStyle = "#1c2733"; b.g.lineWidth = 1.5; b.g.beginPath(); b.g.arc(s[0], s[1], 7, 0, 6.2832); b.g.stroke(); });
+      b.g.fillStyle = "#2a9d5c"; b.g.font = "20px sans-serif"; b.g.fillText("\u2605", qq[0] - 8, qq[1] + 7);
+      b.out.innerHTML = "Votes: blue = <b>" + votes[0] + "</b>, orange = <b>" + votes[1] + "</b> \u2192 predicted <b>" + (votes[1] > votes[0] ? "orange" : "blue") + "</b>" + (votes[0] === votes[1] ? " (tie: use an odd k)" : "") + ". Tap the plot to move the query star.";
+    }
+    $(b.cv).on("click", function (e) { var rc = this.getBoundingClientRect(), sx = this.width / (rc.width || this.width); q = [(e.clientX - rc.left) * sx - 30, 0]; q[0] = Math.max(0, Math.min(1, q[0] / (b.W - 45))); q[1] = Math.max(0, Math.min(1, (b.H - 25 - (e.clientY - rc.top) * sx) / (b.H - 40))); draw(); });
+    $(el).on("input", "input[type=range]", draw); draw();
+  };
+  VIZ.poly = function (el) {
+    var b = vbox(el, slider("d", "Polynomial degree", 1, 10, 1, 3) + slider("lam", "Ridge \u03bb (log10)", -6, 1, 1, -6));
+    var r = rnd(21), tr = [], te = [], i, tf = function (x) { return Math.sin(6.2832 * x); };
+    for (i = 0; i < 12; i++) { var x = (i + 0.5) / 12; tr.push([x, tf(x) + (r() - .5) * .6]); }
+    for (i = 0; i < 40; i++) { var x2 = r(); te.push([x2, tf(x2) + (r() - .5) * .6]); }
+    var X = function (x) { return 30 + x * (b.W - 45); }, Y = function (y) { return b.H / 2 - 12 - y * (b.H / 2 - 30); };
+    function fit(d, lam) {
+      var n = d + 1, A = [], v = [], i, j, k, p, s; for (i = 0; i < n; i++) { A.push([]); for (j = 0; j < n; j++) { s = 0; tr.forEach(function (t) { s += Math.pow(t[0], i + j); }); A[i].push(s + (i === j ? lam : 0)); } s = 0; tr.forEach(function (t) { s += t[1] * Math.pow(t[0], i); }); v.push(s); }
+      for (i = 0; i < n; i++) { p = i; for (k = i + 1; k < n; k++) if (Math.abs(A[k][i]) > Math.abs(A[p][i])) p = k; var T1 = A[i]; A[i] = A[p]; A[p] = T1; var T2 = v[i]; v[i] = v[p]; v[p] = T2;
+        for (k = i + 1; k < n; k++) { var f = A[k][i] / (A[i][i] || 1e-12); for (j = i; j < n; j++) A[k][j] -= f * A[i][j]; v[k] -= f * v[i]; } }
+      var c = new Array(n); for (i = n - 1; i >= 0; i--) { s = v[i]; for (j = i + 1; j < n; j++) s -= A[i][j] * c[j]; c[i] = s / (A[i][i] || 1e-12); } return c;
+    }
+    function draw() {
+      var d = b.v("d"), lam = Math.pow(10, b.v("lam")), c = fit(d, lam), f = function (x) { var s = 0; for (var i = 0; i <= d; i++) s += c[i] * Math.pow(x, i); return s; };
+      axes(b); curve(b.g, tf, 0, 1, X, Y, "rgba(42,157,92,.55)", 2); curve(b.g, function (x) { return Math.max(-2.2, Math.min(2.2, f(x))); }, 0, 1, X, Y, "#2457c5", 2.5);
+      tr.forEach(function (t) { dot(b.g, X(t[0]), Y(t[1]), "#e07a1f", 4.5); }); te.forEach(function (t) { dot(b.g, X(t[0]), Y(t[1]), "rgba(138,151,166,.6)", 2.5); });
+      var mse = function (a) { var s = 0; a.forEach(function (t) { s += Math.pow(f(t[0]) - t[1], 2); }); return s / a.length; }, a1 = mse(tr), a2 = mse(te);
+      b.out.innerHTML = "Train MSE = <b>" + a1.toFixed(3) + "</b>, test MSE = <b>" + (a2 > 1e4 ? "huge" : a2.toFixed(3)) + "</b>. " + (d <= 1 ? "Too simple: underfitting." : d >= 8 && a2 > 2 * a1 ? "Training error is tiny but test error grows: overfitting. Try a larger \u03bb." : "Orange = training points, grey = unseen test points, green = true curve.");
+    }
+    $(el).on("input", "input[type=range]", draw); draw();
+  };
+  VIZ.roc = function (el) {
+    var b = vbox(el, slider("th", "Decision threshold", -2, 4, 0.1, 1) + slider("np", "Positives in data (of 100 negatives)", 5, 100, 5, 50));
+    var r = rnd(9), gauss = function () { return Math.sqrt(-2 * Math.log(r() + 1e-9)) * Math.cos(6.2832 * r()); }, neg = [], pos = [], i;
+    for (i = 0; i < 100; i++) { neg.push(gauss()); pos.push(1.8 + gauss()); }
+    var X = function (x) { return 30 + (x + 3) / 8 * (b.W - 40); }, Y = function (y) { return b.H - 25 - y * (b.H - 45); }, nd = function (m) { return function (x) { return Math.exp(-0.5 * Math.pow(x - m, 2)) / 2.5066 / 0.5; }; };
+    function draw() {
+      var th = b.v("th"), np = b.v("np"), P = pos.slice(0, np); axes(b);
+      curve(b.g, nd(0), -3, 5, X, Y, "#2457c5", 2.5); curve(b.g, nd(1.8), -3, 5, X, Y, "#e07a1f", 2.5);
+      b.g.strokeStyle = "#1c2733"; b.g.lineWidth = 2; b.g.beginPath(); b.g.moveTo(X(th), 8); b.g.lineTo(X(th), b.H - 25); b.g.stroke();
+      var TP = P.filter(function (s) { return s >= th; }).length, FN = np - TP, FP = neg.filter(function (s) { return s >= th; }).length, TN = 100 - FP;
+      var pr = TP + FP ? TP / (TP + FP) : 0, rc = np ? TP / np : 0, f1 = pr + rc ? 2 * pr * rc / (pr + rc) : 0, acc = (TP + TN) / (100 + np);
+      b.out.innerHTML = "TP <b>" + TP + "</b> &middot; FP <b>" + FP + "</b> &middot; FN <b>" + FN + "</b> &middot; TN <b>" + TN + "</b><br>Precision <b>" + pr.toFixed(2) + "</b>, Recall <b>" + rc.toFixed(2) + "</b>, F1 <b>" + f1.toFixed(2) + "</b>, Accuracy <b>" + acc.toFixed(2) + "</b><br><span class='text-muted'>Blue = negatives, orange = positives. Raise the threshold: precision rises, recall falls. Reduce positives to see accuracy mislead.</span>";
+    }
+    $(el).on("input", "input[type=range]", draw); draw();
+  };
+  VIZ.perc = function (el) {
+    var b = vbox(el, '<button class="btn btn-sm btn-primary" data-a="step">Train 1 pass</button> <button class="btn btn-sm btn-outline-primary" data-a="auto">Train 20 passes</button> <button class="btn btn-sm btn-outline-secondary" data-a="reset">Reset</button>');
+    var r = rnd(33), pts = [], i, w, bias, epoch, errs;
+    for (i = 0; i < 24; i++) { var c = i % 2; pts.push([c ? 0.7 + (r() - .5) * .35 : 0.3 + (r() - .5) * .35, c ? 0.7 + (r() - .5) * .35 : 0.3 + (r() - .5) * .35, c]); }
+    var P = function (x, y) { return [30 + x * (b.W - 45), b.H - 25 - y * (b.H - 40)]; };
+    function draw() {
+      axes(b); if (w[0] || w[1]) { var pa = P(0, (-bias - w[0] * 0) / (w[1] || 1e-9)), pb = P(1, (-bias - w[0]) / (w[1] || 1e-9)); b.g.strokeStyle = "#1c2733"; b.g.lineWidth = 2; b.g.beginPath(); b.g.moveTo(pa[0], pa[1]); b.g.lineTo(pb[0], pb[1]); b.g.stroke(); }
+      pts.forEach(function (p) { var s = P(p[0], p[1]); dot(b.g, s[0], s[1], p[2] ? "#e07a1f" : "#2457c5", 5); });
+      b.out.innerHTML = "Passes: <b>" + epoch + "</b>, mistakes in last pass: <b>" + errs + "</b>, w = (" + w[0].toFixed(2) + ", " + w[1].toFixed(2) + "), b = " + bias.toFixed(2) + (epoch && errs === 0 ? ' <span class="text-success">Converged: the data is linearly separable.</span>' : "");
+    }
+    function reset() { w = [0, 0]; bias = 0; epoch = 0; errs = "-"; draw(); }
+    function pass() { errs = 0; pts.forEach(function (p) { var y = w[0] * p[0] + w[1] * p[1] + bias > 0 ? 1 : 0; if (y !== p[2]) { var e = p[2] - y; w[0] += 0.5 * e * p[0]; w[1] += 0.5 * e * p[1]; bias += 0.5 * e; errs++; } }); epoch++; }
+    $(el).on("click", "[data-a]", function () { var a = this.dataset.a; if (a === "reset") { reset(); return; } for (var k = 0; k < (a === "auto" ? 20 : 1); k++) { pass(); if (!errs) break; } draw(); }); reset();
+  };
+
+  /* ---------- stage rendering, quiz engine and progress ---------- */
+  function stageAvail(t) { var ex = EXTRA[t.title] || {}; return { theory: 1, math: !!MATHX[t.title], derive: !!DERIV[t.title], algo: 1, code: 1, viz: 1, quiz: 1, apply: !!(ex.a || ex.alt) }; }
+  function deriveHTML(t) {
+    var d = DERIV[t.title];
+    if (!d) return '<div class="panel mb-3 text-muted">A step-by-step derivation for this topic has not been written yet. The key results are in the <b>Math</b> stage; the Algorithm stage shows how they are used.</div>';
+    return '<div class="panel mb-3"><h3 class="h5">Derivation</h3><ol class="derive">' + $.map(d, function (s) { return "<li><div class=\"dtxt\">" + mathFmt(s[0]) + "</div><div class=\"fmath\">" + mathBlock(s[1]) + "</div></li>"; }).join("") + "</ol></div>";
+  }
+  function algoHTML(t) {
+    var a = ALGO[t.title], ex = EXTRA[t.title] || {}, body;
+    if (a) body = '<div class="algo">' + a.map(function (l, i) { return '<div><span class="ln">' + (i + 1) + '</span><code>' + esc(l).replace(/ {4}/g, "&emsp;") + '</code></div>'; }).join("") + "</div>";
+    else if (ex.d && (ex.d.t === "flow" || ex.d.t === "branch") && ex.d.s) {
+      var steps = ex.d.t === "flow" ? ex.d.s : [ex.d.r].concat(ex.d.s);
+      body = '<ol class="algo-flow">' + steps.map(function (s) { var p = String(s).split("|"); return "<li><b>" + p[0] + "</b>" + (p[1] ? " <span class=\"text-muted\">&ndash; " + p[1] + "</span>" : "") + "</li>"; }).join("") + "</ol>";
+    } else body = '<p class="text-muted mb-0">This topic is a concept or model rather than a step-by-step algorithm. See the diagram in <b>Theory</b> and the code in <b>Code</b>.</p>';
+    return '<div class="panel mb-3"><h3 class="h5">' + (a ? "Algorithm (pseudocode)" : "Workflow") + "</h3>" + body + "</div>";
+  }
+  function vizHTML(t, diagram) {
+    var id = VIZMAP[t.title];
+    if (id) return '<div class="panel mb-3"><h3 class="h5">Interactive visualization</h3><p class="small text-muted mb-2">' + VNAME[id] + '</p><div class="vizbox" data-viz="' + id + '"></div></div>';
+    return (diagram || "") + '<div class="panel mb-3 text-muted small">An interactive demo for this topic is not built yet. Use the diagram above and change values in the Python code to experiment.</div>';
+  }
+  function platformHTML(t, theory, diagram, info, mathPanel, codePanel, apps, alt) {
+    var av = stageAvail(t), done = (PROG[t.title] || {}).s || [];
+    var bar = '<div class="stagebar" role="tablist">' + STAGES.map(function (s, i) {
+      return '<button class="stbtn' + (av[s[0]] ? "" : " dim") + (done.indexOf(s[0]) >= 0 ? " seen" : "") + '" role="tab" data-st="' + s[0] + '"><span class="stn">' + (i + 1) + "</span>" + s[1] + "</button>";
+    }).join("") + "</div>";
+    var next = function (id) { var i = STAGES.map(function (s) { return s[0]; }).indexOf(id); return i < STAGES.length - 1 ? '<div class="text-end mb-3"><button class="btn btn-primary btn-sm nextst" data-st="' + STAGES[i + 1][0] + '">Next: ' + STAGES[i + 1][1] + " &rarr;</button></div>" : '<div class="text-end mb-3"><button class="btn btn-success btn-sm nextt">Next topic &rarr;</button></div>'; };
+    var pane = function (id, html) { return '<section class="stpane" data-pane="' + id + '">' + html + next(id) + "</section>"; };
+    return '<div class="panel mb-3"><h2 class="h4 mb-1">' + t.title + '</h2><div class="small text-muted">Learning path: Theory &rarr; Math &rarr; Derivation &rarr; Algorithm &rarr; Code &rarr; Visualize &rarr; Quiz &rarr; Apply</div></div>' + bar +
+      pane("theory", '<div class="panel mb-3"><h3 class="h5">Theory</h3><ul class="mb-0">' + theory + "</ul></div>" + diagram + info) +
+      pane("math", mathPanel || '<div class="panel mb-3 text-muted">This topic is conceptual; it has no formula sheet. Continue to the Algorithm and Code stages.</div>') +
+      pane("derive", deriveHTML(t)) + pane("algo", algoHTML(t)) + pane("code", codePanel) +
+      pane("viz", vizHTML(t, diagram)) +
+      pane("quiz", '<div class="panel mb-3"><h3 class="h5">Quiz</h3><div class="quizbox"></div></div>') +
+      pane("apply", (apps || '<div class="panel mb-3 text-muted">No applications listed.</div>') + (alt || ""));
+  }
+  function renderQuiz(t) {
+    var qs = quizFor(t), box = $("#content .quizbox"), idx = 0, score = 0, best = (PROG[t.title] || {}).q;
+    function show() {
+      if (idx >= qs.length) {
+        var pct = Math.round(100 * score / qs.length); PROG[t.title] = PROG[t.title] || { s: [] }; PROG[t.title].q = Math.max(best || 0, pct); saveProg(); updateProgUI();
+        box.html('<div class="quizend"><div class="display-6">' + score + " / " + qs.length + '</div><p class="mb-2">' + (pct >= 80 ? "Excellent! You understand this topic well." : pct >= 50 ? "Good start. Review the Theory and Math stages, then retry." : "Revise the Theory and Derivation stages, then try again.") + '</p><button class="btn btn-primary btn-sm" data-qa="retry">Retry quiz</button></div>');
+        return;
+      }
+      var q = qs[idx];
+      box.html('<div class="small text-muted mb-1">Question ' + (idx + 1) + " of " + qs.length + (best != null ? " &middot; best score " + best + "%" : "") + '</div><p class="qtext">' + q.q + '</p><div class="qopts">' + q.o.map(function (o, i) { return '<button class="btn btn-outline-secondary qopt" data-i="' + i + '">' + o + "</button>"; }).join("") + '</div><div class="qfb"></div>');
+    }
+    box.off("click").on("click", ".qopt", function () {
+      if (box.find(".qopt:disabled").length) return; var q = qs[idx], i = +this.dataset.i, ok = i === q.a; if (ok) score++;
+      box.find(".qopt").prop("disabled", true).eq(q.a).addClass("btn-success").removeClass("btn-outline-secondary"); if (!ok) $(this).addClass("btn-danger").removeClass("btn-outline-secondary");
+      box.find(".qfb").html('<div class="alert alert-' + (ok ? "success" : "warning") + ' py-2 mt-2 mb-2">' + (ok ? "Correct. " : "Not quite. ") + q.e + '</div><button class="btn btn-primary btn-sm" data-qa="next">' + (idx + 1 < qs.length ? "Next question" : "See score") + "</button>");
+    }).on("click", "[data-qa]", function () { if (this.dataset.qa === "retry") { idx = 0; score = 0; } else idx++; show(); });
+    show();
+  }
+  function openStage(t, id) {
+    $("#content .stpane").removeClass("on").filter('[data-pane="' + id + '"]').addClass("on");
+    $("#content .stbtn").removeClass("cur").attr("aria-selected", "false").filter('[data-st="' + id + '"]').addClass("cur seen").attr("aria-selected", "true");
+    var p = PROG[t.title] = PROG[t.title] || { s: [] }; if (p.s.indexOf(id) < 0) { p.s.push(id); saveProg(); }
+    if (id === "viz") $("#content .stpane.on .vizbox").each(function () { if (!this.firstChild && VIZ[this.dataset.viz]) { try { VIZ[this.dataset.viz](this); } catch (e) {} } });
+    if (id === "quiz" && !$("#content .quizbox").children().length) renderQuiz(t);
+    var bar = $("#content .stbtn.cur")[0]; if (bar && bar.scrollIntoView) { var sb = bar.parentNode; sb.scrollLeft = bar.offsetLeft - 20; }
+    updateProgUI(); markMenu();
+  }
+  function updateProgUI() {
+    var n = 0, tot = 0; T.forEach(function (t) { var s = (PROG[t.title] || {}).s || []; tot += s.length; if (s.length >= STAGES.length) n++; });
+    var pct = Math.round(100 * tot / (T.length * STAGES.length));
+    $("#progBox").html('<div class="d-flex justify-content-between small"><span>Your progress</span><b>' + pct + '%</b></div><div class="progress" style="height:6px"><div class="progress-bar" style="width:' + pct + '%"></div></div><div class="small text-muted mt-1">' + n + " of " + T.length + ' topics completed <a href="#" id="resetProg" class="ms-1">reset</a></div>');
+  }
+  function markMenu() { $("#menu .topic").each(function () { var t = T[$(this).data("i")], s = ((PROG[t.title] || {}).s || []).length; $(this).toggleClass("done", s >= STAGES.length).toggleClass("part", s > 0 && s < STAGES.length); }); }
+  $("#content").on("click", ".stbtn, .nextst", function () { var t = T[current]; openStage(t, this.dataset.st); if (this.className.indexOf("nextst") >= 0) window.scrollTo({ top: Math.max(0, $("#content .stagebar").offset().top - $(".topbar").outerHeight() - 6), behavior: "smooth" }); });
+  $("#content").on("click", ".nextt", function () { if (current < T.length - 1) $("#next").trigger("click"); });
+  $(document).on("click", "#resetProg", function (e) { e.preventDefault(); if (confirm("Reset all learning progress on this device?")) { PROG = {}; saveProg(); updateProgUI(); markMenu(); $("#content .stbtn").removeClass("seen"); } });
+
   /* ---------- RENDER ---------- */
   var current = 0;
 
@@ -2122,7 +2477,8 @@ print("momentum ->", round(gd(0.05, momentum=0.9), 3))
       html += '<button class="topic' + (i === current ? ' active' : '') + '" data-i="' + i + '">' + t.title + '</button>';
     });
     $("#menu").html(html || '<p class="small text-muted mt-3">No topic found.</p>');
-    if (sbEl) sbEl.scrollTop = keep;   // keep scroll position (no jump back to the top)
+    if (sbEl) sbEl.scrollTop = keep;
+    markMenu();   // keep scroll position (no jump back to the top)
   }
 
   function show(i) {
@@ -2148,9 +2504,7 @@ print("momentum ->", round(gd(0.05, momentum=0.9), 3))
 
     var mathPanel = buildMath(t.title);
 
-    $("#content").html(
-      '<div class="panel mb-3"><h2 class="h4">' + t.title + '</h2>' +
-        '<ul class="mb-0">' + theory + '</ul></div>' + diagram + info + mathPanel +
+    var codePanel =
       '<div class="panel">' +
         '<h3 class="h5">Python code</h3>' +
         '<div class="libs mb-2"><small class="text-muted me-2">Libraries:</small>' + libs + '</div>' +
@@ -2159,13 +2513,14 @@ print("momentum ->", round(gd(0.05, momentum=0.9), 3))
         '<pre><code class="language-python"></code></pre>' +
         '<h3 class="h6 mt-3">Important parameters</h3>' +
         '<table class="table table-sm params mb-0"><tbody>' + params + '</tbody></table>' +
-      '</div>' + apps + alt
-    );
+      '</div>';
+    $("#content").html(platformHTML(t, theory, diagram, info, mathPanel, codePanel, apps, alt));
     $("#content pre code").text(t.code);
     hljs.highlightElement($("#content pre code")[0]);
     if (!$("#menu .topic").length) buildMenu($("#search").val().toLowerCase());
     else $("#menu .topic").removeClass("active").filter('[data-i="' + i + '"]').addClass("active");
     revealActive();
+    openStage(t, "theory");
     $("#pos").text("Topic " + (i + 1) + " of " + T.length);
     $("#prev").prop("disabled", i === 0);
     $("#next").prop("disabled", i === T.length - 1);

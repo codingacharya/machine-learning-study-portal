@@ -2,7 +2,7 @@
    - works offline after the first visit
    - always tries the network first for the page, so new deploys show up
    - change VERSION whenever you upload new files */
-const VERSION = "v8";
+const VERSION = "v9";
 const CACHE = "ml-theory-ace-" + VERSION;
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest",
